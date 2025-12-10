@@ -12,6 +12,9 @@ from langgraph.func import task
 from langchain.tools import tool, ToolRuntime
 from langgraph.store.memory import InMemoryStore
 from langchain.agents import create_agent
+import xml.etree.ElementTree as ET
+from .hadrons_xml import HadronsXML
+
 from .common import *
 
 
@@ -22,20 +25,39 @@ class DWFaction(BaseModel):
     mass: float = Field(..., description="the mass parameter of the action and its associated propagators")
     M5: float = Field(..., description="the M5 parameter of the action")
 
+    def setXML(self,name,xml):
+        opt = xml.addModule(name,"MAction::DWF")
+        HadronsXML.setValues(opt, [ ("gauge", "gauge"), ("Ls", self.Ls), ("mass", self.mass), ("M5",self.M5), ("boundary", "1 1 1 -1"), ("twist", "0. 0. 0. 0.") ] )
+
+       
 class WilsonCloverAction(BaseModel):
     """A Wilson-Clover (aka Clover) action instance"""
     type: Literal["WilsonClover"] = "WilsonClover"
+    mass: float = Field(..., description="the mass parameter of the action and its associated propagators")
     csw_r: float = Field(..., description="Clover-term coefficient c_SW^r")
     csw_t: float = Field(..., description="Clover-term coefficient c_SW^t")
-    clover_anisotropy: float = Field(..., description="the mass parameter of the action and its associated propagators")
+                        
+    def setXML(self,name,xml):
+        opt = xml.addModule(name,"MAction::DWF")
+        HadronsXML.setValues(opt, [ ("gauge", "gauge"), ("mass", self.mass), ("csw_r",self.csw_r), ("csw_t",self.csw_t) ] )
+
+        ca = ET.SubElement(opt, "clover_anisotropy")
+        HadronsXML.setValues(ca, [ ("isAnisotropic", "false"), ("t_direction",3), ("xi_0", "1.0"), ("nu", "1.0") ] )
+                        
+        HadronsXML.setValues(opt, [ ("boundary", "1 1 1 -1"), ("twist", "0. 0. 0. 0.") ] )                               
+                      
+
     
 class ActionConfig(BaseModel):
     name : str = Field(..., description="The name/tag for the action instance")
     action: Union[DWFaction,WilsonCloverAction] = Field(..., description="Parameters of the action. Each item must have a 'type' field. Valid values are: DWF, WilsonClover")
 
+    def setXML(self,xml):
+        self.action.setXML(self.name, xml)
+    
 class ActionsConfig(BaseModel):
     actions: List[ActionConfig] = Field(...,description="The list of action instances")
-
+   
 @tool
 def addDWFaction(name: str, Ls: int, mass: float, M5: float, runtime: ToolRuntime) -> None:
     """Add an instance of the Domain-Wall fermion (DWF) action to the list of action instances
@@ -48,15 +70,15 @@ def addDWFaction(name: str, Ls: int, mass: float, M5: float, runtime: ToolRuntim
     storeListAppend("actions", ActionConfig(name=name, action=DWFaction(Ls=Ls, mass=mass, M5=M5)), runtime.store)
 
 @tool
-def addWilsonCloverAction(name: str, csw_r: float, cws_t : float, clover_anisotropy : float, runtime: ToolRuntime) -> None:
+def addWilsonCloverAction(name: str, mass: float, csw_r: float, csw_t : float, runtime: ToolRuntime) -> None:
     """Add an instance of the Domain-Wall fermion (DWF) action to the list of action instances
     Args:
        name: The name/tag for the action instance
+       mass: the mass parameter of the action and its associated propagators
        csw_r: Clover-term coefficient c_SW^r
        csw_t: Clover-term coefficient c_SW^t
-       clover_anisotropy: the mass parameter of the action and its associated propagators
     """
-    storeListAppend("actions", ActionConfig(name=name, action=WilsonCloverAction(csw_r=csw_r, csw_t=csw_t, clover_anisotropy=clover_anisotropy)), runtime.store)
+    storeListAppend("actions", ActionConfig(name=name, action=WilsonCloverAction(mass=mass,csw_r=csw_r, csw_t=csw_t)), runtime.store)
     
        
     

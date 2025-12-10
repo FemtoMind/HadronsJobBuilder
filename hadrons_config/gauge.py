@@ -16,6 +16,7 @@ from langgraph.store.memory import InMemoryStore
 
 import json
 from .common import *
+from .hadrons_xml import HadronsXML
 
 class LoadGauge(BaseModel):
     """Load NERSC-format gauge configurations. If the user provides a range, infer from it the start, step and end."""
@@ -24,19 +25,34 @@ class LoadGauge(BaseModel):
     start : int = Field(...,description="The index of the first configuration")
     step : int = Field(...,description="The increment between successive configurations")
     end : int = Field(...,description="The index of the last configuration")
-                       
+
+    def setXML(self,xml):
+        opt = xml.addModule("gauge","MGauge::MIO")
+        HadronsXML.setValue(opt, "file", self.stub)
+        xml.setTrajCounter(self.start, self.end, self.step)
+                            
+
+    
 class UnitGauge(BaseModel):
     """Use a unit gauge configuration"""
     type: Literal["gauge-unit"] = "gauge-unit"
 
+    def setXML(self,xml):
+        xml.addModule("gauge","MGauge::Unit")
+    
 class RandomGauge(BaseModel):
     """Use a random gauge configuration"""
     type: Literal["gauge-random"] = "gauge-random"
+    def setXML(self,xml):
+        xml.addModule("gauge","MGauge::Random")
 
+    
 class GaugeFieldConfig(BaseModel):
     config: Union[LoadGauge,UnitGauge,RandomGauge] = Field(
         ..., description="Information about the gauge configuration(s) that will be computed upon."
-    )  
+    )
+    def setXML(self,xml):
+        self.config.setXML(xml)
 
 #This seems to be another one that confuses ToolStrategy, giving incorrect structured output
 @tool

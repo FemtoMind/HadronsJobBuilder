@@ -11,12 +11,17 @@ from typing import Literal, Union, List, Optional, Tuple
 from langgraph.func import task
 from langchain.agents.structured_output import ToolStrategy, ProviderStrategy
 from .common import *
+from .hadrons_xml import HadronsXML
 
 class PropagatorConfig(BaseModel):
     name : str = Field(..., description="The name/tag for the propagator instance")
     source: str = Field(..., description="The name/tag of the propagator's source instance")
     solver: str = Field(..., description="The name/tag of the propagator's solver instance")
 
+    def setXML(self,xml):
+        opt = xml.addModule(self.name,"MFermion::GaugeProp")
+        HadronsXML.setValues(opt, [ ("source",self.source), ("solver",self.solver) ])
+    
 class PropagatorsConfig(BaseModel):
     propagators: List[PropagatorConfig] = Field(...,description="The list of propagator instances")
    

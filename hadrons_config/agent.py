@@ -2,6 +2,7 @@ from langgraph.func import entrypoint, task
 import os
 from .common import *
 from .state import *
+from .hadrons_xml import HadronsXML
 
 @entrypoint()
 def agent(args):
@@ -100,3 +101,26 @@ GAUGE CONFIGURATIONS
         state.gauge = identifyGaugeConfigs(model, messages).result()
         checkpointState(state,ckpoint_file)
         
+
+    xml = HadronsXML()
+    xml.setRunID(1234)
+    
+    state.gauge.setXML(xml)
+    for a in state.actions:
+        a.setXML(xml)
+    for s in state.sources:
+        s.setXML(xml)
+    for s in state.solvers:
+        s.setXML(xml)
+    for p in state.propagators:
+        p.setXML(xml)
+
+    #Temporary; add a zero-momentum point sink for two-point functions
+    #TODO: Have the observables agent also construct sinks as needed
+    snk = xml.addModule("point_sink_zerop", "MSink::ScalarPoint")
+    HadronsXML.setValue(snk, "mom", "0. 0. 0.")
+        
+    for o in state.observable_configs:
+        o.setXML(xml)
+    
+    xml.write("hadrons_run.xml")

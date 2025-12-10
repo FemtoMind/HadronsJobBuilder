@@ -11,6 +11,7 @@ from typing import Literal, Union, List, Optional, Tuple
 from langgraph.func import task
 from langchain.agents.structured_output import ToolStrategy, ProviderStrategy
 from langchain.agents import create_agent
+from .hadrons_xml import HadronsXML
 import json
 from .common import *
 
@@ -19,6 +20,11 @@ class PointSource(BaseModel):
     type: Literal["point"] = "point"
     location: Tuple[NonNegativeInt,NonNegativeInt,NonNegativeInt,NonNegativeInt] = Field(..., description="The point source 4D location")
 
+    def setXML(self,name,xml):
+        opt = xml.addModule(name,"MSource::Point")
+        HadronsXML.setValue(opt, "position", spaceSeparateSeq(self.location))
+        
+    
 class WallSource(BaseModel):
     """A wall or wall-momentum (aka just "momentum") source. A wall source requires just a timeslice, whereas a wall-momentum source needs a momentum also."""
     type: Literal["wall"] = "wall"
@@ -27,11 +33,20 @@ class WallSource(BaseModel):
         None, description="Optional four-momentum"
     )
 
+    def setXML(self,name,xml):
+        opt = xml.addModule(name,"MSource::Wall")
+        HadronsXML.setValues(opt, [ ("tW",self.timeslice), ("mom", "0. 0. 0. 0." if self.momentum == None else spaceSeparateSeq(self.momentum) ) ])
+
+    
 class SourceConfig(BaseModel):
     name : str = Field(..., description="The name/tag for the source")
     source: Union[PointSource, WallSource] = Field(
         ..., description="Information about the source. Each item must have a 'type' field. Valid values are: 'point', 'wall'  "  #Note, without specifying the valid values here, the agent accepted invalid options
-    )  
+    )
+    
+    def setXML(self,xml):
+        self.source.setXML(self.name,xml)
+    
 
 class SourcesConfig(BaseModel):
     sources: List[SourceConfig] = Field(...,description="The list of source instances")

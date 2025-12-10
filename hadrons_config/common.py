@@ -84,3 +84,9 @@ Your output must be in JSON format. Use the following schema:
             raise Exception("Not able to parse output correctly within 10 tries")
 
         return obj
+
+def spaceSeparateSeq(seq):
+    r = ""
+    for i, v in enumerate(seq):
+        r = r + str(v) + ("" if i==len(seq)-1 else " ")
+    return r
