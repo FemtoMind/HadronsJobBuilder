@@ -1,0 +1,108 @@
+from langchain_core.messages import BaseMessage
+from langchain.messages import (
+    SystemMessage,
+    HumanMessage,
+    ToolCall,
+    AIMessage
+)
+
+from pydantic import BaseModel, Field, ConfigDict, NonNegativeInt, TypeAdapter
+from typing import Literal, Union, List, Optional, Tuple
+from langgraph.func import task
+from langchain.tools import tool, ToolRuntime
+from langgraph.store.memory import InMemoryStore
+from langchain.agents import create_agent
+from .common import *
+
+
+class DWFaction(BaseModel):
+    """A Domain Wall Fermion (DWF) action instance"""
+    type: Literal["DWF"] = "DWF"
+    Ls: int = Field(..., description="The length/size of the fifth dimension")
+    mass: float = Field(..., description="the mass parameter of the action and its associated propagators")
+    M5: float = Field(..., description="the M5 parameter of the action")
+
+class WilsonCloverAction(BaseModel):
+    """A Wilson-Clover (aka Clover) action instance"""
+    type: Literal["WilsonClover"] = "WilsonClover"
+    csw_r: float = Field(..., description="Clover-term coefficient c_SW^r")
+    csw_t: float = Field(..., description="Clover-term coefficient c_SW^t")
+    clover_anisotropy: float = Field(..., description="the mass parameter of the action and its associated propagators")
+    
+class ActionConfig(BaseModel):
+    name : str = Field(..., description="The name/tag for the action instance")
+    action: Union[DWFaction,WilsonCloverAction] = Field(..., description="Parameters of the action. Each item must have a 'type' field. Valid values are: DWF, WilsonClover")
+
+class ActionsConfig(BaseModel):
+    actions: List[ActionConfig] = Field(...,description="The list of action instances")
+
+@tool
+def addDWFaction(name: str, Ls: int, mass: float, M5: float, runtime: ToolRuntime) -> None:
+    """Add an instance of the Domain-Wall fermion (DWF) action to the list of action instances
+    Args:
+       name: The name/tag for the action instance
+       Ls: The length/size of the fifth dimension
+       mass: the mass parameter of the action and its associated propagators
+       M5: the M5 parameter of the action
+    """
+    storeListAppend("actions", ActionConfig(name=name, action=DWFaction(Ls=Ls, mass=mass, M5=M5)), runtime.store)
+
+@tool
+def addWilsonCloverAction(name: str, csw_r: float, cws_t : float, clover_anisotropy : float, runtime: ToolRuntime) -> None:
+    """Add an instance of the Domain-Wall fermion (DWF) action to the list of action instances
+    Args:
+       name: The name/tag for the action instance
+       csw_r: Clover-term coefficient c_SW^r
+       csw_t: Clover-term coefficient c_SW^t
+       clover_anisotropy: the mass parameter of the action and its associated propagators
+    """
+    storeListAppend("actions", ActionConfig(name=name, action=WilsonCloverAction(csw_r=csw_r, csw_t=csw_t, clover_anisotropy=clover_anisotropy)), runtime.store)
+    
+       
+    
+@task
+def identifyActions(model, user_interactions: list[BaseMessage]) -> ActionsConfig:
+    """
+    Parse the list of messages to identify a list of actions and their associated parameters
+    """
+    
+    sys = """
+You are an assistant responsible for identifying all lattice QCD action instances required to compute the propagators required for the calculation, based solely on user input.
+
+You add action instances using tool calls. An action instance has an action type (e.g. DWF, WilsonClover) along with a set of parameters including the quark mass. Create a separate entry for each unique collection of parameters, for example, if the user specifies DWF propagators with Ls=12, M5=1.8 and masses of 0.03 and 0.05, create two separate action instances with different mass values.
+
+For each required action:
+1. Identify the appropriate tool based on the action type. If the user does not specify an action type you must ask the user. Never guess an action type.
+2. Call the tool using the action parameters specified by the user. If a parameter value is unknown you must ask the user; never guess parameters. 
+3. When calling the tool you must also assign a unique tag/name to the instance. Never use the same tag for different instances. The tag should include the action name and enough of the parameter values to uniquely distinguish it among the other action instances, prefering shorter tags if possible. 
+    
+Action instance rules:    
+- Create a separate entry for each action instance, even if the action appears multiple times with different parameters.
+- Your list must include every action instance explicitly mentioned, and only those. Do not invent instances. do not combine instances unless the user explicitly describes them as the same.
+
+User Query rules:
+- Use the getUserInput tool
+- If the user responds to a query with an invalid response, repeat the query until a valid response is provided. Never accept an invalid response.
+- Instead of answering your question, the user might respond to your query with a question. If this occurs, answer the user's question using provideInformationToUser tool and ensure the user is satisfied with a follow-up call to getUserInput. Once satisfied, repeat the original question.
+"""
+    accepted = False
+    obj = None
+    while(accepted == False):
+        store = InMemoryStore()
+        agent = create_agent(model=model, tools=[getUserInput,provideInformationToUser,addDWFaction,addWilsonCloverAction], system_prompt=sys, store=store)
+        
+        resp = agent.invoke({ "messages": user_interactions },     {"configurable": {"thread_id": "1"}})
+
+        print(resp)
+
+        obj = ActionsConfig(actions = storeGetList("actions",store))
+        
+        print("Obtained", len(obj.actions), "action instances")
+        for r in obj.actions:
+            print(r)
+
+        accepted = queryYesNo("Is this correct? [y/n]: ")
+        if(accepted == False):
+            reason = input("Explain what is wrong: ")
+            user_interactions.append(HumanMessage(f"Your previous response was not accepted for the following reason: {reason}"))            
+    return obj
