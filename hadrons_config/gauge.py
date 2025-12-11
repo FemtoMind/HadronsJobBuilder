@@ -27,7 +27,7 @@ class LoadGauge(BaseModel):
     end : int = Field(...,description="The index of the last configuration")
 
     def setXML(self,xml):
-        opt = xml.addModule("gauge","MGauge::MIO")
+        opt = xml.addModule("gauge","MIO::LoadNersc")
         HadronsXML.setValue(opt, "file", self.stub)
         xml.setTrajCounter(self.start, self.end, self.step)
                             

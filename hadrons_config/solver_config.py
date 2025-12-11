@@ -37,7 +37,7 @@ class SolversConfig(BaseModel):
     solvers: List[SolverConfig] = Field(...,description="The list of solver instances")
 
 @task
-def identifySolvers(model, user_interactions: list[BaseMessage]) -> SolversConfig:
+def identifySolvers(model, state, user_interactions: list[BaseMessage]) -> SolversConfig:
     """
     Parse the list of messages to identify a list of solver instances and their associated parameters
     """
@@ -75,9 +75,27 @@ Your output must be in JSON format and adhere to the following schema:
     obj = None
     while(accepted == False):    
         resp = agent.invoke({ "messages": user_interactions })
-        print(resp)
+        #print(resp)
         obj = resp["structured_response"]        
-        
+
+        #Auto validation
+        valid = True
+        invalid_why = "Your previous response was invalid for the following reason(s):"
+        names = []
+        for r in obj.solvers:
+            if not state.isValidAction(r.action):
+                invalid_why += f"\n-Action instance '{r.action}' does not exist"
+                valid = False
+            if r.name in names:
+                invalid_why += f"\n-Solver name '{r.name}' is not unique"
+                valid = False
+            names.append(r.name)
+                                
+        if not valid:
+            user_interactions.append(HumanMessage(invalid_why))
+            continue        
+
+        #Human validation
         print("Obtained", len(obj.solvers), "solvers")
         for r in obj.solvers:
             print(r)

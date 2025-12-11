@@ -115,7 +115,7 @@ User Query rules:
         
         resp = agent.invoke({ "messages": user_interactions },     {"configurable": {"thread_id": "1"}})
 
-        print(resp)
+        #print(resp)
 
         obj = ActionsConfig(actions = storeGetList("actions",store))
         

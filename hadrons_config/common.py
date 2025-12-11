@@ -56,7 +56,7 @@ def callModelWithStructuredOutput(model, sys_prompt : str, other_messages : list
         
         ret = model.with_structured_output(schema, method="function_calling").invoke(messages) #using method=json_schema (default I think) produces garbled output for the oss-120b model for some reason; function_calling seems more reliable
         if ret == None:
-            raise Exception("Obtained a null result from the model") #if this happens it might be because the last message is an AIMessage not a HumanMessage. Models seem to implicitly rely on this!
+            raise Exception(f"Obtained a null result from the model. If this happens it might be because the last message is an AIMessage not a HumanMessage. Models seem to implicitly rely on this! Message history: {messages}") 
         return ret
         
     else:

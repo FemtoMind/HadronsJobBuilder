@@ -30,3 +30,28 @@ class State(BaseModel):
     propagators: List[PropagatorConfig] | None = Field(None,description="The list of propagator instances")
     observable_configs : List[ObservableConfig] | None = Field(None,description="The list of observable instances")
     gauge: GaugeFieldConfig | None = Field(None,description="The gauge configuration parameters")
+
+    def isValidAction(self, action_name):
+        for p in self.actions:
+            if p.name == action_name:
+                return True
+        return False
+    
+    def isValidSource(self, source_name):
+        for p in self.sources:
+            if p.name == source_name:
+                return True
+        return False
+
+    def isValidSolver(self, solver_name):
+        for p in self.solvers:
+            if p.name == solver_name:
+                return True
+        return False   
+    
+    def isValidPropagator(self, prop_name):
+        for p in self.propagators:
+            if p.name == prop_name:
+                return True
+        return False
+        

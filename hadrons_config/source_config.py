@@ -54,7 +54,7 @@ class SourcesConfig(BaseModel):
 
 
 @task
-def identifySources(model, user_interactions: list[BaseMessage]) -> SourcesConfig:
+def identifySources(model, state, user_interactions: list[BaseMessage]) -> SourcesConfig:
     """
     Parse the list of messages to identify a list of propagator sources and their associated parameters
     """
@@ -87,9 +87,24 @@ Your output must be in JSON format and adhere to the following schema:
     obj = None
     while(accepted == False):    
         resp = agent.invoke({ "messages": user_interactions })
-        print(resp)
+        #print(resp)
         obj = resp["structured_response"]        
+
+        #Auto validation
+        valid = True
+        invalid_why = "Your previous response was invalid for the following reason(s):"
+        names = []
+        for r in obj.sources:
+            if r.name in names:
+                invalid_why += f"\n-Source name '{r.name}' is not unique"
+                valid = False
+            names.append(r.name)
+                                
+        if not valid:
+            user_interactions.append(HumanMessage(invalid_why))
+            continue       
         
+        #Human validation
         print("Obtained", len(obj.sources), "sources")
         for r in obj.sources:
             print(r)

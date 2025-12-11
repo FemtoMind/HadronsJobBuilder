@@ -56,7 +56,7 @@ ACTIONS
 SOURCES
 ======================
         """)
-        state.sources = identifySources(model, messages).result().sources
+        state.sources = identifySources(model, state, messages).result().sources
         checkpointState(state,ckpoint_file)
        
     if state.solvers == None:
@@ -65,7 +65,7 @@ SOURCES
 SOLVERS
 ======================
         """) 
-        state.solvers = identifySolvers(model, messages).result().solvers
+        state.solvers = identifySolvers(model, state, messages).result().solvers
         checkpointState(state,ckpoint_file)
 
     #Add sources and solvers to messages
@@ -79,8 +79,10 @@ SOLVERS
 PROPAGATORS
 ======================
         """) 
-        state.propagators = identifyPropagators(model, messages).result().propagators
+        state.propagators = identifyPropagators(model, state, messages).result().propagators
         checkpointState(state,ckpoint_file)
+
+    messages.append( HumanMessage("The following propagator instances have been identified based on user input:\n" + json.dumps(TypeAdapter(List[PropagatorConfig]).dump_python(state.propagators), indent=2) ) )               
 
     if state.observable_configs == None:
                 
@@ -89,7 +91,7 @@ PROPAGATORS
 OBSERVABLE CONFIGURATIONS
 ======================
         """)
-        state.observable_configs = configureObservables(model, messages).result().observable_configs
+        state.observable_configs = configureObservables(model, state, messages).result().observable_configs
         checkpointState(state,ckpoint_file)
 
     if state.gauge == None:
@@ -101,7 +103,7 @@ GAUGE CONFIGURATIONS
         state.gauge = identifyGaugeConfigs(model, messages).result()
         checkpointState(state,ckpoint_file)
         
-
+    #XML output
     xml = HadronsXML()
     xml.setRunID(1234)
     

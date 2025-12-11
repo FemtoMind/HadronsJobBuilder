@@ -28,7 +28,10 @@ class HadronsXML:
         self.setValue(self.database, "restoreModules", "false")
         self.setValue(self.database, "restoreMemoryProfile", "false")
         self.setValue(self.database, "restoreSchedule", "false")
-        self.setValue(self.database, "makeStatDb","false")
+        #self.setValue(self.database, "makeStatDb","false")
+        self.setValue(self.database, "statDbBase", "stats.db")
+        self.setValue(self.database, "statDbPeriodMs", 1000)
+        self.setValue(self.database, "statDbAllRanks", "false")
 
         self.genetic = ET.SubElement(self.parameters, "genetic")
         self.setValue(self.genetic, "popSize", 20)

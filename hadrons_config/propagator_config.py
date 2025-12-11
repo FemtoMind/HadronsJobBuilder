@@ -27,7 +27,7 @@ class PropagatorsConfig(BaseModel):
    
 
 @task
-def identifyPropagators(model, user_interactions: list[BaseMessage]) -> PropagatorsConfig:
+def identifyPropagators(model, state, user_interactions: list[BaseMessage]) -> PropagatorsConfig:
     #Likely don't need an agent as we will not be asking questions of the user
     sys = """
 You are responsible for identifying the lattice QCD propagators for the calculation alongside their associated solver and source.
@@ -48,8 +48,30 @@ Your output must be in JSON format and adhere to the following schema:
     accepted = False
     obj = None
     while(accepted == False):
-        obj = callModelWithStructuredOutput(model, sys, user_interactions, PropagatorsConfig, True)       
-        
+        obj = callModelWithStructuredOutput(model, sys, user_interactions, PropagatorsConfig, True)
+
+        #Auto validation
+        valid = True
+        invalid_why = "Your previous response was invalid for the following reason(s):"
+        names = []
+        for r in obj.propagators:
+            if not state.isValidSource(r.source):
+                invalid_why += f"\n-Source instance '{r.source}' does not exist"
+                valid = False
+            if not state.isValidSolver(r.solver):
+                invalid_why += f"\n-Solver instance '{r.solver}' does not exist"
+                valid = False
+            if r.name in names:
+                invalid_why += f"\n-Propagator name '{r.name}' is not unique"
+                valid = False
+            names.append(r.name)
+                                
+        if not valid:
+            user_interactions.append(HumanMessage(invalid_why))
+            continue
+
+
+        #Human validation
         print("Obtained", len(obj.propagators), "propagators")
         for r in obj.propagators:
             print(r)
