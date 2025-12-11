@@ -52,7 +52,7 @@ class Vector2ptConfig(BaseModel):
         mesonModuleXML(name, xml, gammas, self.propagators[0], self.propagators[1])
 
     def validate(self, state):
-        return validateProps(self.propagators)
+        return validateProps(self.propagators, state)
    
 class ObservableConfig(BaseModel):
     """An instance of an observable."""

@@ -39,13 +39,14 @@ class UnitGauge(BaseModel):
 
     def setXML(self,xml):
         xml.addModule("gauge","MGauge::Unit")
-    
+        xml.setTrajCounter(0,1,1)
+        
 class RandomGauge(BaseModel):
     """Use a random gauge configuration"""
     type: Literal["gauge-random"] = "gauge-random"
     def setXML(self,xml):
         xml.addModule("gauge","MGauge::Random")
-
+        xml.setTrajCounter(0,1,1)
     
 class GaugeFieldConfig(BaseModel):
     config: Union[LoadGauge,UnitGauge,RandomGauge] = Field(
