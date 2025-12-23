@@ -8,7 +8,6 @@ from langchain.messages import (
 
 from pydantic import BaseModel, Field, ConfigDict, NonNegativeInt, TypeAdapter
 from typing import Literal, Union, List, Optional, Tuple
-from langgraph.func import task
 from langchain.agents.structured_output import ToolStrategy, ProviderStrategy
 from .common import *
 from .hadrons_xml import HadronsXML
@@ -69,7 +68,6 @@ class ObservablesConfig(BaseModel):
     observable_configs: List[ObservableConfig] = Field(...,description="The list of observable instances and their configurations")
 
 
-@task
 def configureObservables(model, state, user_interactions: list[BaseMessage]) -> ObservablesConfig:
     sys = """
     Reasoning: high

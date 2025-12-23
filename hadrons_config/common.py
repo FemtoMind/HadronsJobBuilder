@@ -7,6 +7,7 @@ from langchain.messages import (
     ToolCall,
     AIMessage
 )
+import json
 
 def storeGetList(key, store):
     l = store.get( ("ns",),key)
@@ -52,11 +53,16 @@ def callModelWithStructuredOutput(model, sys_prompt : str, other_messages : list
     """
     if use_langchain_structured_output_method:
         messages = [ SystemMessage(sys_prompt) ] + other_messages
-        #print(messages)
-        
-        ret = model.with_structured_output(schema, method="function_calling").invoke(messages) #using method=json_schema (default I think) produces garbled output for the oss-120b model for some reason; function_calling seems more reliable
-        if ret == None:
-            raise Exception(f"Obtained a null result from the model. If this happens it might be because the last message is an AIMessage not a HumanMessage. Models seem to implicitly rely on this! Message history: {messages}") 
+        ret = None
+        retries=0
+        while ret == None:
+            if retries > 10:
+                raise Exception(f"Obtained a null result from the model. Attempted 10 times. If this happens it might be because the last message is an AIMessage not a HumanMessage. Models seem to implicitly rely on this! Message history: {messages}") 
+                
+                
+            ret = model.with_structured_output(schema, method="function_calling").invoke(messages) #using method=json_schema (default I think) produces garbled output for the oss-120b model for some reason; function_calling seems more reliable
+            retries+=1
+            
         return ret
         
     else:

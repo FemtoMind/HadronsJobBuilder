@@ -8,7 +8,6 @@ from langchain.messages import (
 
 from pydantic import BaseModel, Field, ConfigDict, NonNegativeInt, TypeAdapter
 from typing import Literal, Union, List, Optional, Tuple
-from langgraph.func import task
 from langchain.agents.structured_output import ToolStrategy, ProviderStrategy
 from langchain.agents import create_agent
 from langchain.tools import tool, ToolRuntime
@@ -80,7 +79,6 @@ def setLoadGauge(stub : str, start: int, step: int, end: int, runtime : ToolRunt
 
     
 
-@task
 def identifyGaugeConfigs(model, user_interactions: list[BaseMessage]) -> GaugeFieldConfig:
     sys = """
 You are an assistant responsible for identifying the lattice QCD propagator gauge configuration(s) to use for the calculation, based solely on user input.

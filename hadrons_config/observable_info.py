@@ -9,7 +9,6 @@ from langchain.messages import (
 from pydantic import BaseModel, Field, ConfigDict, NonNegativeInt, TypeAdapter
 from typing import Literal, Union, List, Optional, Tuple
 from .common import *
-from langgraph.func import task
 
 class Pion2ptObs(BaseModel):
    """The pion two-point function. This observable involves a contraction of two propagators, which may be the same."""
@@ -33,7 +32,6 @@ class ObservableInfo(BaseModel):
 class ObservablesInfo(BaseModel):
     observables: List[ObservableInfo] = Field(...,description="The list of observables")
 
-@task
 def identifyObservables(model, user_interactions: list[BaseMessage]) -> ObservablesInfo:
     """
     Parse the list of messages to identify a list of observable keys and their associated information

@@ -8,7 +8,6 @@ from langchain.messages import (
 import json
 from pydantic import BaseModel, Field, ConfigDict, NonNegativeInt, TypeAdapter
 from typing import Literal, Union, List, Optional, Tuple
-from langgraph.func import task
 from langchain.agents.structured_output import ToolStrategy, ProviderStrategy
 from .common import *
 from .hadrons_xml import HadronsXML
@@ -26,7 +25,6 @@ class PropagatorsConfig(BaseModel):
     propagators: List[PropagatorConfig] = Field(...,description="The list of propagator instances")
    
 
-@task
 def identifyPropagators(model, state, user_interactions: list[BaseMessage]) -> PropagatorsConfig:
     #Likely don't need an agent as we will not be asking questions of the user
     sys = """
@@ -48,7 +46,7 @@ Your output must be in JSON format and adhere to the following schema:
     accepted = False
     obj = None
     while(accepted == False):
-        obj = callModelWithStructuredOutput(model, sys, user_interactions, PropagatorsConfig, True)
+        obj = callModelWithStructuredOutput(model, sys, user_interactions, PropagatorsConfig)
 
         #Auto validation
         valid = True

@@ -1,25 +1,13 @@
-from langgraph.func import entrypoint, task
 import os
 from .common import *
 from .state import *
 from .hadrons_xml import HadronsXML
 
-@entrypoint()
-def agent(args):
-    messages = args["messages"]
-    ckpoint_file = args["ckpoint_file"]
-    reload_state = args["reload_state"]
-    model = args["model"]
-    
+def agent(query, model, ckpoint_file="state.json", reload_state=True):
+    messages = [HumanMessage(query)]
     state = State()
-    if reload_state == "true":
+    if reload_state and os.path.exists(ckpoint_file):
         state = reloadStateCheckpoint(ckpoint_file)
-    elif reload_state == "if_exists":
-        if os.path.exists(ckpoint_file):
-            state = reloadStateCheckpoint(ckpoint_file)
-    elif reload_state != "false":
-        raise Exception("Argument 'reload_state' must be 'true', 'false' or 'if_exists'")    
-
         
     print(state)
 
@@ -29,7 +17,7 @@ def agent(args):
 IDENTIFY OBSERVABLES
 ======================
         """)       
-        state.observables = identifyObservables(model, messages).result().observables
+        state.observables = identifyObservables(model, messages).observables
         checkpointState(state,ckpoint_file)
 
     #Augment messages with information derived from observables
@@ -44,7 +32,7 @@ IDENTIFY OBSERVABLES
 ACTIONS
 ======================
         """)       
-        state.actions = identifyActions(model, messages).result().actions
+        state.actions = identifyActions(model, messages).actions
         checkpointState(state,ckpoint_file)
 
     #Add actions information to messages
@@ -56,16 +44,17 @@ ACTIONS
 SOURCES
 ======================
         """)
-        state.sources = identifySources(model, state, messages).result().sources
+        state.sources = identifySources(model, state, messages).sources
         checkpointState(state,ckpoint_file)
-       
+
+
     if state.solvers == None:
         print("""
 ======================
 SOLVERS
 ======================
         """) 
-        state.solvers = identifySolvers(model, state, messages).result().solvers
+        state.solvers = identifySolvers(model, state, messages).solvers
         checkpointState(state,ckpoint_file)
 
     #Add sources and solvers to messages
@@ -79,7 +68,7 @@ SOLVERS
 PROPAGATORS
 ======================
         """) 
-        state.propagators = identifyPropagators(model, state, messages).result().propagators
+        state.propagators = identifyPropagators(model, state, messages).propagators
         checkpointState(state,ckpoint_file)
 
     messages.append( HumanMessage("The following propagator instances have been identified based on user input:\n" + json.dumps(TypeAdapter(List[PropagatorConfig]).dump_python(state.propagators), indent=2) ) )               
@@ -91,7 +80,7 @@ PROPAGATORS
 OBSERVABLE CONFIGURATIONS
 ======================
         """)
-        state.observable_configs = configureObservables(model, state, messages).result().observable_configs
+        state.observable_configs = configureObservables(model, state, messages).observable_configs
         checkpointState(state,ckpoint_file)
 
     if state.gauge == None:
@@ -100,7 +89,7 @@ OBSERVABLE CONFIGURATIONS
 GAUGE CONFIGURATIONS
 ======================
         """)
-        state.gauge = identifyGaugeConfigs(model, messages).result()
+        state.gauge = identifyGaugeConfigs(model, messages)
         checkpointState(state,ckpoint_file)
         
     #XML output

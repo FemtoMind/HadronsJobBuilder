@@ -8,7 +8,6 @@ from langchain.messages import (
 
 from pydantic import BaseModel, Field, ConfigDict, NonNegativeInt, TypeAdapter
 from typing import Literal, Union, List, Optional, Tuple
-from langgraph.func import task
 from langchain.tools import tool, ToolRuntime
 from langgraph.store.memory import InMemoryStore
 from langchain.agents import create_agent
@@ -82,7 +81,6 @@ def addWilsonCloverAction(name: str, mass: float, csw_r: float, csw_t : float, r
     
        
     
-@task
 def identifyActions(model, user_interactions: list[BaseMessage]) -> ActionsConfig:
     """
     Parse the list of messages to identify a list of actions and their associated parameters

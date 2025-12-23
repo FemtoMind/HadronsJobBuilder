@@ -39,5 +39,5 @@ query = "Compute the pion two-point function with mass 0.01 for both propagators
 
 
 print(query)
-agent.invoke({ "messages":[HumanMessage(query)], "reload_state":"if_exists", "ckpoint_file" : "state.json", "model" : zerot_llm })
+agent(query, zerot_llm, reload_state=True, ckpoint_file="state.json")
 

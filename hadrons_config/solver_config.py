@@ -8,7 +8,6 @@ from langchain.messages import (
 import json
 from pydantic import BaseModel, Field, ConfigDict, NonNegativeInt, TypeAdapter
 from typing import Literal, Union, List, Optional, Tuple
-from langgraph.func import task
 from langchain.agents.structured_output import ToolStrategy, ProviderStrategy
 from langchain.agents import create_agent
 from .common import *
@@ -36,7 +35,6 @@ class SolverConfig(BaseModel):
 class SolversConfig(BaseModel):
     solvers: List[SolverConfig] = Field(...,description="The list of solver instances")
 
-@task
 def identifySolvers(model, state, user_interactions: list[BaseMessage]) -> SolversConfig:
     """
     Parse the list of messages to identify a list of solver instances and their associated parameters
