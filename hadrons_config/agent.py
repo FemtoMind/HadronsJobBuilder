@@ -61,7 +61,6 @@ SOLVERS
     messages.append( HumanMessage("The following source instances have been identified based on user input:\n" + json.dumps(TypeAdapter(List[SourceConfig]).dump_python(state.sources), indent=2) ) )        
     messages.append( HumanMessage("The following solver instances have been identified based on user input:\n" + json.dumps(TypeAdapter(List[SolverConfig]).dump_python(state.solvers), indent=2) ) )        
 
-        
     if state.propagators == None:
         print("""
 ======================

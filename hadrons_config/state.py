@@ -31,6 +31,12 @@ class State(BaseModel):
     observable_configs : List[ObservableConfig] | None = Field(None,description="The list of observable instances")
     gauge: GaugeFieldConfig | None = Field(None,description="The gauge configuration parameters")
 
+    def isValidObservable(self, obs_name):
+        for p in self.observables:
+            if p.name == obs_name:
+                return True
+        return False
+    
     def isValidAction(self, action_name):
         for p in self.actions:
             if p.name == action_name:

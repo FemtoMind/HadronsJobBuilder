@@ -14,7 +14,7 @@ class Pion2ptObs(BaseModel):
    """The pion two-point function. This observable involves a contraction of two propagators, which may be the same."""
    type: Literal["pion2pt"] = "pion2pt"
    n_propagator: Literal[2] = Field(2, description="The required number of propagators")
-   obs_info: Literal[""] = Field("", description="General information about this observable")
+   obs_info: Literal[""] = Field("", description="General information about this observable")   
    
 class Vector2ptObs(BaseModel):
    """The vector two-point function. This observable involves a contraction of two propagators, which may be the same."""
@@ -28,6 +28,7 @@ class ObservableInfo(BaseModel):
    user_info: str = Field(...,description="Any relevant information obtained from the user regarding the observable, such as "
                      "propagator masses, momenta, source/sink smearing, etc. "
                      "Use an empty string if no extra information is given.")
+   name: str = Field(...,description="A unique name/tag identifier for this observable instance")
     
 class ObservablesInfo(BaseModel):
     observables: List[ObservableInfo] = Field(...,description="The list of observables")
@@ -54,6 +55,8 @@ Record only the information that the user has clearly provided about that specif
 – quantum numbers or kinematic parameters
 – anything else explicitly tied to the computation
 
+Assign a unique name/tag to the observable instance.
+    
 If the user did not specify information for an observable, leave its information field empty rather than guessing or filling in defaults.
 
 You can output the same observable information for multiple entries but only if they have different observable types.

@@ -35,8 +35,15 @@ zerot_llm = ChatOpenAI(
 #M5=1.8"""
 
 #query = "Compute the pion two-point function"
-query = "Compute the pion two-point function with mass 0.01 for both propagators and again with mass 0.02 for both"
+#query = "Compute the pion two-point function with mass 0.01 for both propagators and again with mass 0.02 for both"
+#query = "Compute the pion two-point and vector two-point functions using propagators of mass 0.01 and 0.03."
 
+query = """Compute the pion two-point and vector two-point functions. In both cases use a propagator of mass 0.01 and another of mass 0.03.
+Other parameters:
+Use DWF quarks with M5=1.8 and Ls=12
+Use the RBPrecCG solver with residual 1e-8 and default max iterations
+Use the unit gauge
+"""
 
 print(query)
 agent(query, zerot_llm, reload_state=True, ckpoint_file="state.json")

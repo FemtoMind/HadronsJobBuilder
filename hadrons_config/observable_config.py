@@ -62,6 +62,8 @@ class ObservableConfig(BaseModel):
         self.obs.setXML(self.name, xml)
 
     def validate(self, state):
+        if not state.isValidObservable(self.name):
+            return (False,"The name/tag for this observable instance does not match one in the list of previously-identified observables")
         return self.obs.validate(state)
        
 class ObservablesConfig(BaseModel):
@@ -81,7 +83,7 @@ def configureObservables(model, state, user_interactions: list[BaseMessage]) -> 
     For every ObservableInfo in the list contained within the message history:
     1. Parse the user information and background knowledge for the observable
     2. Identify the propagators required to compute this observable and note their name field. These names and no other must be used to fill the list of propagators. Use only the names of propagators, not of other types of instance (e.g. sources, solvers, actions)
-    3. Assign a unique tag/name to the observable instance. Never use the same tag for different instances.
+    3. Use the name/tag in the ObservableInfo to fill in the 'name' field for this observable instance. Do not generate new observable names.
     4. Add a new ObservableConfig with matching 'type' enum and populate the associated parameters. 
     
     Your list must include every observable in the list and only those. Do not invent observables, do not combine observables, and do not add details that are not explicitly provided by the user.

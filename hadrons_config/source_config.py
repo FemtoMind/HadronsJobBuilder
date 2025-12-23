@@ -36,12 +36,14 @@ class WallSource(BaseModel):
         opt = xml.addModule(name,"MSource::Wall")
         HadronsXML.setValues(opt, [ ("tW",self.timeslice), ("mom", "0. 0. 0. 0." if self.momentum == None else spaceSeparateSeq(self.momentum) ) ])
 
+
     
 class SourceConfig(BaseModel):
     name : str = Field(..., description="The name/tag for the source")
     source: Union[PointSource, WallSource] = Field(
         ..., description="Information about the source. Each item must have a 'type' field. Valid values are: 'point', 'wall'  "  #Note, without specifying the valid values here, the agent accepted invalid options
     )
+    observables: List[str] = Field(...,description="The observable instances to which this source will be associated")
     
     def setXML(self,xml):
         self.source.setXML(self.name,xml)
@@ -65,7 +67,8 @@ A source instance has a source type (e.g. point, wall) along with a set of param
 For each required propagator:
 1. Identify the appropriate schema for the 'source' field based on the requires source type. If the user does not specify a source type you must ask the user. Never guess a source type.
 2. Fill in all parameters of the source field as specified by the user. If a parameter value is unknown you must ask the user; never guess parameters.
-4. Assign a unique tag/name to the instance. Never use the same tag for different instances. The tag should include the action name and enough of the parameter values to uniquely distinguish it among the other source instances, prefering shorter tags if possible. 
+3. Assign a unique tag/name to the instance. Never use the same tag for different instances. The tag should include the action name and enough of the parameter values to uniquely distinguish it among the other source instances, prefering shorter tags if possible.
+4. Fill the 'observables' field with a list of the observable instance names/tags that this source will be used for    
 
 Source instance rules:    
 - Create a separate entry for each action instance, even if the action appears multiple times with different parameters.
