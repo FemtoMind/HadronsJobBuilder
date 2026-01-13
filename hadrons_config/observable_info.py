@@ -69,13 +69,13 @@ Your list must include every observable explicitly mentioned, and only those obs
     while(accepted == False):
         obj = callModelWithStructuredOutput(model, sys, user_interactions, ObservablesInfo, True)
 
-        print("Obtained", len(obj.observables), " observables")
+        Print("Obtained", len(obj.observables), "observables")
         for r in obj.observables:
-            print(r)
+            Print(r)
             
         accepted = queryYesNo("Is this correct? [y/n]: ")
         if(accepted == False):
-            reason = input("Explain what is wrong: ")
+            reason = Input("Explain what is wrong: ")
             user_interactions.append(HumanMessage(f"Your previous response was not accepted for the following reason: {reason}"))            
     return obj
     

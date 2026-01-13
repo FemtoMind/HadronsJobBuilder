@@ -8,6 +8,7 @@ from langchain.messages import (
     AIMessage
 )
 import json
+import io
 
 def storeGetList(key, store):
     l = store.get( ("ns",),key)
@@ -22,6 +23,51 @@ def storeListAppend(key, value, store):
     ll.append(value)
     store.put(("ns",), key, ll)
 
+
+use_auto_eval = False    
+auto_eval_messages = None
+auto_eval_ostrm = None  
+auto_eval_model = None
+auto_eval_sys = None
+
+def enableAutoEvaluate(model, sys):
+    global use_auto_eval
+    global auto_eval_model
+    global auto_eval_sys
+    global auto_eval_messages
+    global auto_eval_ostrm
+    use_auto_eval = True
+    auto_eval_model = model
+    auto_eval_sys = sys
+    auto_eval_ostrm = io.StringIO()
+    auto_eval_messages = []
+    
+def Print(*args, **kwargs):
+    if use_auto_eval == True:
+        global auto_eval_ostrm
+        print(*args, *kwargs, file=auto_eval_ostrm)
+    else:
+        print(*args, *kwargs)
+        
+def Input(query):
+    if use_auto_eval == True:
+        global auto_eval_ostrm
+        global auto_eval_messages
+        auto_eval_messages.append(HumanMessage(auto_eval_ostrm.getvalue()))
+        auto_eval_ostrm.close()
+        auto_eval_ostrm = io.StringIO()
+
+        auto_eval_messages.append(HumanMessage(query))
+        print("TO EVAL AGENT:", auto_eval_messages[-2].content,"\n",auto_eval_messages[-1].content)
+        
+        msg = [ SystemMessage(auto_eval_sys) ] + auto_eval_messages 
+        ret = auto_eval_model.invoke(msg).content
+        print("EVAL AGENT RESPONSE:", ret)
+        return ret
+    else:        
+        return input(query + " : ").strip()
+
+        
 @tool
 def getUserInput(query: str) -> str:
     """
@@ -31,19 +77,19 @@ def getUserInput(query: str) -> str:
     Return:
        Return the user's response
     """    
-    return input(query + " : ").strip()
+    return Input(query + " : ")
 
 @tool
 def provideInformationToUser(description: str):
     """
     Provide some text information to the user
     """
-    print(description)
+    Print(description)
 
 def queryYesNo(query: str)->bool:
     result = ""
     while(result not in ["y","n"]):    
-        result = input(query)
+        result = Input(query)
     return True if result == "y" else False
         
 

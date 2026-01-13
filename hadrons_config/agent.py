@@ -12,7 +12,7 @@ def agent(query, model, ckpoint_file="state.json", reload_state=True):
     print(state)
 
     if state.observables == None:
-        print("""
+        Print("""
 ======================
 IDENTIFY OBSERVABLES
 ======================
@@ -22,12 +22,9 @@ IDENTIFY OBSERVABLES
 
     #Augment messages with information derived from observables
     messages.append( HumanMessage("The following information has been derived regarding the observables we need to compute based on user input:\n" + json.dumps(TypeAdapter(List[ObservableInfo]).dump_python(state.observables)  , indent=2) ) )
-    print(messages[-1].content)
-                               
-
-    
+                                
     if state.actions == None:
-        print("""
+        Print("""
 ======================
 ACTIONS
 ======================
@@ -39,7 +36,7 @@ ACTIONS
     messages.append( HumanMessage("The following action instances have been identified based on user input:\n" + json.dumps(TypeAdapter(List[ActionConfig]).dump_python(state.actions), indent=2) ) )        
         
     if state.sources == None:
-        print("""
+        Print("""
 ======================
 SOURCES
 ======================
@@ -49,7 +46,7 @@ SOURCES
 
 
     if state.solvers == None:
-        print("""
+        Print("""
 ======================
 SOLVERS
 ======================
@@ -62,7 +59,7 @@ SOLVERS
     messages.append( HumanMessage("The following solver instances have been identified based on user input:\n" + json.dumps(TypeAdapter(List[SolverConfig]).dump_python(state.solvers), indent=2) ) )        
 
     if state.propagators == None:
-        print("""
+        Print("""
 ======================
 PROPAGATORS
 ======================
@@ -74,7 +71,7 @@ PROPAGATORS
 
     if state.observable_configs == None:
                 
-        print("""
+        Print("""
 ======================
 OBSERVABLE CONFIGURATIONS
 ======================
@@ -83,7 +80,7 @@ OBSERVABLE CONFIGURATIONS
         checkpointState(state,ckpoint_file)
 
     if state.gauge == None:
-        print("""
+        Print("""
 ======================
 GAUGE CONFIGURATIONS
 ======================

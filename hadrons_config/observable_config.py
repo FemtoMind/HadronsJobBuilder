@@ -62,8 +62,12 @@ class ObservableConfig(BaseModel):
         self.obs.setXML(self.name, xml)
 
     def validate(self, state):
-        if not state.isValidObservable(self.name):
+        obs_info = state.locateObservable(self.name)
+        if obs_info is None:
             return (False,"The name/tag for this observable instance does not match one in the list of previously-identified observables")
+        if obs_info.obs_type.type != self.obs.type:
+            return (False,"The 'obs' field for this observable instance does not have the same type as the ObservableInfo with this name")
+        
         return self.obs.validate(state)
        
 class ObservablesConfig(BaseModel):
@@ -82,9 +86,9 @@ def configureObservables(model, state, user_interactions: list[BaseMessage]) -> 
 
     For every ObservableInfo in the list contained within the message history:
     1. Parse the user information and background knowledge for the observable
-    2. Identify the propagators required to compute this observable and note their name field. These names and no other must be used to fill the list of propagators. Use only the names of propagators, not of other types of instance (e.g. sources, solvers, actions)
-    3. Use the name/tag in the ObservableInfo to fill in the 'name' field for this observable instance. Do not generate new observable names.
-    4. Add a new ObservableConfig with matching 'type' enum and populate the associated parameters. 
+    2. Create a new ObservableConfig and use the 'name' field from the ObservableInfo to fill in the 'name' field for this observable instance. Do not generate new observable names.
+       Select the type of the 'obs' field based on the 'obs_type' field of the ObservableInfo, ensuring that their 'type' fields match.
+    3. Identify the propagators required to compute this observable and note their 'name' field. These names and no other must be used to fill the list of propagators in the 'obs' field. Use only the names of propagators, not of other types of instance (e.g. sources, solvers, actions)
     
     Your list must include every observable in the list and only those. Do not invent observables, do not combine observables, and do not add details that are not explicitly provided by the user.
     Do not invent or infer any information not explicitly obtained from the message history.
@@ -116,12 +120,12 @@ def configureObservables(model, state, user_interactions: list[BaseMessage]) -> 
 
         
         #Human validation
-        print("Obtained", len(obj.observable_configs), " observable configurations")
+        Print("Obtained", len(obj.observable_configs), " observable configurations")
         for r in obj.observable_configs:
-            print(r)
+            Print(r)
             
         accepted = queryYesNo("Is this correct? [y/n]: ")
         if(accepted == False):
-            reason = input("Explain what is wrong: ")
+            reason = Input("Explain what is wrong: ")
             user_interactions.append(HumanMessage(f"Your previous response was not accepted for the following reason: {reason}"))            
     return obj

@@ -117,12 +117,12 @@ User Query rules:
 
         obj = ActionsConfig(actions = storeGetList("actions",store))
         
-        print("Obtained", len(obj.actions), "action instances")
+        Print("Obtained", len(obj.actions), "action instances")
         for r in obj.actions:
-            print(r)
+            Print(r)
 
         accepted = queryYesNo("Is this correct? [y/n]: ")
         if(accepted == False):
-            reason = input("Explain what is wrong: ")
+            reason = Input("Explain what is wrong: ")
             user_interactions.append(HumanMessage(f"Your previous response was not accepted for the following reason: {reason}"))            
     return obj

@@ -76,12 +76,12 @@ Your output must be in JSON format and adhere to the following schema:
 
 
         #Human validation
-        print("Obtained", len(obj.propagators), "propagators")
+        Print("Obtained", len(obj.propagators), "propagators")
         for r in obj.propagators:
-            print(r)
+            Print(r)
 
         accepted = queryYesNo("Is this correct? [y/n]: ")
         if(accepted == False):
-            reason = input("Explain what is wrong: ")
+            reason = Input("Explain what is wrong: ")
             user_interactions.append(HumanMessage(f"Your previous response was not accepted for the following reason: {reason}"))            
     return obj

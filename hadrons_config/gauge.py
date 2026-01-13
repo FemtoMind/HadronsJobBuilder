@@ -110,10 +110,10 @@ User Query rules:
         config = store.get( ("ns",), "gauge").value
         obj = GaugeFieldConfig(config=config)
         
-        print("Obtained gauge field parameters:", obj.config)
+        Print("Obtained gauge field parameters:", obj.config)
 
         accepted = queryYesNo("Is this correct? [y/n]: ")
         if(accepted == False):
-            reason = input("Explain what is wrong: ")
+            reason = Input("Explain what is wrong: ")
             user_interactions.append(HumanMessage(f"Your previous response was not accepted for the following reason: {reason}"))            
     return obj

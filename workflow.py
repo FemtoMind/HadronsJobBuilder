@@ -1,4 +1,3 @@
-#Organization and addition of gauge config info
 from langchain_openai import ChatOpenAI
 from hadrons_config import *
 from langchain.messages import (
@@ -20,8 +19,9 @@ zerot_llm = ChatOpenAI(
     openai_api_base="http://localhost:8000/v1",
     temperature=0
 )
+#    seed=1234   doesn't work
           
-#query = input("What is your question? :")
+query = input("Describe the observables you wish to compute: ")
 #query = "Compute the pion two-point and vector two-point functions using propagators of mass 0.01 and 0.03."
 #query = "Compute the pion two-point function with DWF propagators of mass 0.01 and 0.03, and again with masses 0.02 and 0.04."
 
@@ -38,13 +38,13 @@ zerot_llm = ChatOpenAI(
 #query = "Compute the pion two-point function with mass 0.01 for both propagators and again with mass 0.02 for both"
 #query = "Compute the pion two-point and vector two-point functions using propagators of mass 0.01 and 0.03."
 
-query = """Compute the pion two-point and vector two-point functions. In both cases use a propagator of mass 0.01 and another of mass 0.03.
-Other parameters:
-Use DWF quarks with M5=1.8 and Ls=12
-Use the RBPrecCG solver with residual 1e-8 and default max iterations
-Use the unit gauge
-"""
+#query = """Compute the pion two-point and vector two-point functions. In both cases use a propagator of mass 0.01 and another of mass 0.03.
+#Other parameters:
+#Use DWF quarks with M5=1.8 and Ls=12
+#Use the RBPrecCG solver with residual 1e-8 and default max iterations
+#Use the unit gauge
+#"""
 
 print(query)
-agent(query, zerot_llm, reload_state=True, ckpoint_file="state.json")
+agent(query, zerot_llm, reload_state=False)
 

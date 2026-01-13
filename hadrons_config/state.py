@@ -36,6 +36,12 @@ class State(BaseModel):
             if p.name == obs_name:
                 return True
         return False
+
+    def locateObservable(self, obs_name) -> ObservableInfo | None:
+        for p in self.observables:
+            if p.name == obs_name:
+                return p
+        return None
     
     def isValidAction(self, action_name):
         for p in self.actions:
