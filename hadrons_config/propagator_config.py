@@ -16,7 +16,9 @@ class PropagatorConfig(BaseModel):
     name : str = Field(..., description="The name/tag for the propagator instance")
     source: str = Field(..., description="The name/tag of the propagator's source instance")
     solver: str = Field(..., description="The name/tag of the propagator's solver instance")
-    observables: List[str] = Field(...,description="The observable instances to which this propagator will be associated")
+    user_info: str = Field(..., description="Additional information (if any) provided by the user on what observables this propagator will be used for")
+
+    #observables: List[str] = Field(...,description="The observable instances to which this propagator will be associated")
     
     def setXML(self,xml):
         opt = xml.addModule(self.name,"MFermion::GaugeProp")
@@ -41,7 +43,8 @@ If more than one observable requires a propagator with the same source/solver co
 1. Identify the name of the associated source instance and use it to fill the 'source' parameter.
 2. Identify the name of the associated solver instance and use it to fill the 'solver' parameter. To perform this identification, combine the parameters of the solver instance with those of the associated action instance, which is tagged by the field 'action'.
 3. Assign a unique tag/name to the propagator instance. Never use the same tag for different instances. The tag should include the solver and source name.
-4. Fill the 'observables' field with a list of the observable instance names/tags that this propagator will be used for.
+4. For the 'user_info' field, summarize any information relevant to what observables this solver will be used for provided by the user. It is important that any positional information about the propagator be included, for example whether it is the first or second propagator of a two-point function, or if it is a 'spectator' quark in a baryon. If the user does now specify any details, use an empty string. For example, if the user specifies that this propagator will be used for both quarks of the pion two-point function, enter "use for both quarks of the pion two-point function" in user_info.
+
     
 Propagator instance rules:    
 - Your list must include every propagator instance required for the observables, and only those. Do not invent instances.
@@ -52,7 +55,7 @@ Your output must be in JSON format and adhere to the following schema:
     accepted = False
     obj = None
     while(accepted == False):
-        obj = callModelWithStructuredOutput(model, sys, user_interactions, PropagatorsConfig)
+        obj = callModelWithStructuredOutput(model, sys, user_interactions, PropagatorsConfig, use_langchain_structured_output_method = False)
 
         #Auto validation
         valid = True

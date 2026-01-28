@@ -46,5 +46,5 @@ query = input("Describe the observables you wish to compute: ")
 #"""
 
 print(query)
-agent(query, zerot_llm, reload_state=False)
+agent(query, zerot_llm, reload_state=True)
 

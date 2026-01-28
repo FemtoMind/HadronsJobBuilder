@@ -3,11 +3,16 @@ from .common import *
 from .state import *
 from .hadrons_xml import HadronsXML
 
-def agent(query, model, ckpoint_file="state.json", reload_state=True):
-    messages = [HumanMessage(query)]
-    state = State()
+def agent(query, model, ckpoint_file="state.json", reload_state=True):    
     if reload_state and os.path.exists(ckpoint_file):
         state = reloadStateCheckpoint(ckpoint_file)
+        query = state.query
+        print("Reloaded query from state file:", query)
+    else:
+        state = State()
+
+    state.query = query
+    messages = [HumanMessage(query)]
         
     print(state)
 
@@ -22,7 +27,7 @@ IDENTIFY OBSERVABLES
 
     #Augment messages with information derived from observables
     messages.append( HumanMessage("The following information has been derived regarding the observables we need to compute based on user input:\n" + json.dumps(TypeAdapter(List[ObservableInfo]).dump_python(state.observables)  , indent=2) ) )
-                                
+
     if state.actions == None:
         Print("""
 ======================
@@ -33,8 +38,9 @@ ACTIONS
         checkpointState(state,ckpoint_file)
 
     #Add actions information to messages
+    #TODO: We don't need to pass forward all the parameter details of the actions, only the user_info and instance names are required
     messages.append( HumanMessage("The following action instances have been identified based on user input:\n" + json.dumps(TypeAdapter(List[ActionConfig]).dump_python(state.actions), indent=2) ) )        
-        
+
     if state.sources == None:
         Print("""
 ======================
@@ -43,7 +49,6 @@ SOURCES
         """)
         state.sources = identifySources(model, state, messages).sources
         checkpointState(state,ckpoint_file)
-
 
     if state.solvers == None:
         Print("""

@@ -23,6 +23,7 @@ def reloadStateCheckpoint(filename):
     return State.model_validate_json(j)
 
 class State(BaseModel):
+    query: str | None = Field(None,description="The original query")
     observables: List[ObservableInfo] | None = Field(None,description="The list of observables and associated relevant information")
     actions: List[ActionConfig] | None = Field(None,description="The list of action instances")
     sources: List[SourceConfig] | None = Field(None,description="The list of source instances")

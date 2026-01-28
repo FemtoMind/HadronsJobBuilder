@@ -88,7 +88,7 @@ def configureObservables(model, state, user_interactions: list[BaseMessage]) -> 
     1. Parse the user information and background knowledge for the observable
     2. Create a new ObservableConfig and use the 'name' field from the ObservableInfo to fill in the 'name' field for this observable instance. Do not generate new observable names.
        Select the type of the 'obs' field based on the 'obs_type' field of the ObservableInfo, ensuring that their 'type' fields match.
-    3. Identify the propagators required to compute this observable and note their 'name' field. These names and no other must be used to fill the list of propagators in the 'obs' field. Use only the names of propagators, not of other types of instance (e.g. sources, solvers, actions)
+    3. Identify the propagators required to compute this observable and note their 'name' field based upon the 'user_info' field of the PropagatorConfig. These names and no other must be used to fill the list of propagators in the 'obs' field. Use only the names of propagators, not of other types of instance (e.g. sources, solvers, actions)
     
     Your list must include every observable in the list and only those. Do not invent observables, do not combine observables, and do not add details that are not explicitly provided by the user.
     Do not invent or infer any information not explicitly obtained from the message history.

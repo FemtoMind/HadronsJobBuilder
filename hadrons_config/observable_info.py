@@ -49,15 +49,14 @@ For each observable mentioned by the user:
 
 Create a separate entry for each, even if the observable appears multiple times with different parameters or conditions.
 
-Record only the information that the user has clearly provided about that specific instance of the observable. Examples include:
+Assign a unique name/tag to the observable instance.
+    
+In the user_info field, summarize any additional information provided by the user regarding the observable. Record only the information that the user has clearly provided about that specific instance of the observable. Examples include:
 – required propagators
 – operator insertions
 – quantum numbers or kinematic parameters
-– anything else explicitly tied to the computation
-
-Assign a unique name/tag to the observable instance.
-    
-If the user did not specify information for an observable, leave its information field empty rather than guessing or filling in defaults.
+– anything else explicitly tied to the computation   
+If the user did not specify information for an observable, leave its user_info field empty rather than guessing or filling in defaults.
 
 You can output the same observable information for multiple entries but only if they have different observable types.
     

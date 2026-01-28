@@ -28,7 +28,8 @@ class SolverConfig(BaseModel):
     name : str = Field(..., description="The name/tag for the solver instance")
     solver_args: Union[RBPrecCGsolver] = Field(..., description="Parameters of the solver. Each item must have a 'type' field. Valid values are: RBPrecCG")
     action: str = Field(..., description="The name/tag of the action instance to use with the solver.")
-
+    user_info: str = Field(..., description="Additional information (if any) provided by the user on what observables/propagators this solver will be used for")
+    
     def setXML(self,xml):
         self.solver_args.setXML(self.name,self.action,xml)
     
@@ -51,7 +52,9 @@ Create a separate entry for each unique collection of parameters, for example if
 1. Identify the name of the associated action instance and use it to fill the 'action' parameter.
 2. Identify the appropriate schema for the 'solver_args' field based on the requires solver type. If the user does not specify a solver type you must ask the user unless there is only one option. Never guess a solver type if there are more than one options.
 3. Fill in all parameters of the solver_args field as specified by the user. If a parameter value is unknown you must ask the user; never guess parameters unless they are specifically described with the word DEFAULTABLE, which indicates that the default value can be chosen.
-4. Assign a unique tag/name to the solver instance. Never use the same tag for different instances. The tag should include the action name and enough of the parameter values to uniquely distinguish it among the other source instances, prefering shorter tags if possible. 
+4. Assign a unique tag/name to the solver instance. Never use the same tag for different instances. The tag should include the action name and enough of the parameter values to uniquely distinguish it among the other source instances, prefering shorter tags if possible.
+5. For the 'user_info' field, summarize any information relevant to what observables/propagators this solver will be used for provided by the user. It is important that any positional information about the propagator be included, for example whether it is the first or second propagator of a two-point function, or if it is a 'spectator' quark in a baryon. If the user does now specify any details, use an empty string. For example, if the user specifies that this solver will be used for light quark propagators, enter "use for all light quark propagators" in user_info.
+    
 
 - Ensure there is at least one solver instance per action instance.
     

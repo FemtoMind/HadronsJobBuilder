@@ -50,7 +50,8 @@ class WilsonCloverAction(BaseModel):
 class ActionConfig(BaseModel):
     name : str = Field(..., description="The name/tag for the action instance")
     action: Union[DWFaction,WilsonCloverAction] = Field(..., description="Parameters of the action. Each item must have a 'type' field. Valid values are: DWF, WilsonClover")
-
+    user_info: str = Field(..., description="Additional information (if any) provided by the user on what observables/propagators this action will be used for")
+    
     def setXML(self,xml):
         self.action.setXML(self.name, xml)
     
@@ -58,26 +59,28 @@ class ActionsConfig(BaseModel):
     actions: List[ActionConfig] = Field(...,description="The list of action instances")
    
 @tool
-def addDWFaction(name: str, Ls: int, mass: float, M5: float, runtime: ToolRuntime) -> None:
+def addDWFaction(name: str, user_info: str, Ls: int, mass: float, M5: float, runtime: ToolRuntime) -> None:
     """Add an instance of the Domain-Wall fermion (DWF) action to the list of action instances
     Args:
        name: The name/tag for the action instance
+       user_info: Additional information (if any) provided by the user on what observables/propagators this action will be used for
        Ls: The length/size of the fifth dimension
        mass: the mass parameter of the action and its associated propagators
        M5: the M5 parameter of the action
     """
-    storeListAppend("actions", ActionConfig(name=name, action=DWFaction(Ls=Ls, mass=mass, M5=M5)), runtime.store)
+    storeListAppend("actions", ActionConfig(name=name, action=DWFaction(Ls=Ls, mass=mass, M5=M5), user_info=user_info), runtime.store)
 
 @tool
-def addWilsonCloverAction(name: str, mass: float, csw_r: float, csw_t : float, runtime: ToolRuntime) -> None:
+def addWilsonCloverAction(name: str, user_info: str, mass: float, csw_r: float, csw_t : float, runtime: ToolRuntime) -> None:
     """Add an instance of the Domain-Wall fermion (DWF) action to the list of action instances
     Args:
        name: The name/tag for the action instance
+       user_info: Additional information (if any) provided by the user on what observables/propagators this action will be used for
        mass: the mass parameter of the action and its associated propagators
        csw_r: Clover-term coefficient c_SW^r
        csw_t: Clover-term coefficient c_SW^t
     """
-    storeListAppend("actions", ActionConfig(name=name, action=WilsonCloverAction(mass=mass,csw_r=csw_r, csw_t=csw_t)), runtime.store)
+    storeListAppend("actions", ActionConfig(name=name, action=WilsonCloverAction(mass=mass,csw_r=csw_r, csw_t=csw_t), user_info=user_info), runtime.store)
     
        
     
@@ -85,7 +88,7 @@ def identifyActions(model, user_interactions: list[BaseMessage]) -> ActionsConfi
     """
     Parse the list of messages to identify a list of actions and their associated parameters
     """
-    
+
     sys = """
 You are an assistant responsible for identifying all lattice QCD action instances required to compute the propagators required for the calculation, based solely on user input.
 
@@ -93,9 +96,13 @@ You add action instances using tool calls. An action instance has an action type
 
 For each required action:
 1. Identify the appropriate tool based on the action type. If the user does not specify an action type you must ask the user. Never guess an action type.
-2. Call the tool using the action parameters specified by the user. If a parameter value is unknown you must ask the user; never guess parameters. 
-3. When calling the tool you must also assign a unique tag/name to the instance. Never use the same tag for different instances. The tag should include the action name and enough of the parameter values to uniquely distinguish it among the other action instances, prefering shorter tags if possible. 
-    
+2. Call the tool using the action parameters specified by the user. If a parameter value is unknown you must ask the user; never guess parameters.
+
+   For the 'user_info' field, summarize any information relevant to what observables/propagators this action will be used for provided by the user. It is important that any positional information about the propagator be included, for example whether it is the first or second propagator of a two-point function, or if it is a 'spectator' quark in a baryon. If the user does now specify any details, use an empty string. For example, if the user specifies that this action will be used for light quark propagators, enter "use for all light quark propagators" in user_info.
+
+   When calling the tool you must also assign a unique tag/name to the instance. Never use the same tag for different instances. The tag should include the action name and enough of the parameter values to uniquely distinguish it among the other action instances, prefering shorter tags if possible.
+
+   
 Action instance rules:    
 - Create a separate entry for each action instance, even if the action appears multiple times with different parameters.
 - Your list must include every action instance explicitly mentioned, and only those. Do not invent instances. do not combine instances unless the user explicitly describes them as the same.
