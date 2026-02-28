@@ -56,7 +56,7 @@ class Vector2ptConfig(BaseModel):
 class ObservableConfig(BaseModel):
     """An instance of an observable."""
     name: str = Field(..., description="The name/tag of the observable instance")        
-    obs: Union[Pion2ptConfig,Vector2ptConfig] = Field(...,description="The observation instance and configuration.")
+    obs: Union[Pion2ptConfig,Vector2ptConfig] = Field(...,description="The observation instance and configuration.", discriminator='type')
 
     def setXML(self, xml):
         self.obs.setXML(self.name, xml)

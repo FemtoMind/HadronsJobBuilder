@@ -49,7 +49,7 @@ class WilsonCloverAction(BaseModel):
     
 class ActionConfig(BaseModel):
     name : str = Field(..., description="The name/tag for the action instance")
-    action: Union[DWFaction,WilsonCloverAction] = Field(..., description="Parameters of the action. Each item must have a 'type' field. Valid values are: DWF, WilsonClover")
+    action: Union[DWFaction,WilsonCloverAction] = Field(..., description="Parameters of the action. Each item must have a 'type' field. Valid values are: DWF, WilsonClover",discriminator='type')
     user_info: str = Field(..., description="Additional information (if any) provided by the user on what observables/propagators this action will be used for")
     
     def setXML(self,xml):

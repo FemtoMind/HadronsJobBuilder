@@ -49,7 +49,7 @@ class RandomGauge(BaseModel):
     
 class GaugeFieldConfig(BaseModel):
     config: Union[LoadGauge,UnitGauge,RandomGauge] = Field(
-        ..., description="Information about the gauge configuration(s) that will be computed upon."
+        ..., description="Information about the gauge configuration(s) that will be computed upon.", discriminator='type'
     )
     def setXML(self,xml):
         self.config.setXML(xml)

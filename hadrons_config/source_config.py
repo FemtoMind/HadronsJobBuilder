@@ -41,7 +41,7 @@ class WallSource(BaseModel):
 class SourceConfig(BaseModel):
     name : str = Field(..., description="The name/tag for the source")
     source: Union[PointSource, WallSource] = Field(
-        ..., description="Information about the source. Each item must have a 'type' field. Valid values are: 'point', 'wall'  "  #Note, without specifying the valid values here, the agent accepted invalid options
+        ..., description="Information about the source.", discriminator='type'  # Each item must have a 'type' field. Valid values are: 'point', 'wall'  
     )
     user_info: str = Field(..., description="Additional information (if any) provided by the user on what observables/propagators this source will be used for")
     
@@ -88,13 +88,12 @@ User Query rules:
 Your output must be in JSON format and adhere to the following schema:    
 """ + json.dumps(SourcesConfig.model_json_schema())  ##appears necessary to also include the schema in the prompt else it hallucinates valid actions and does not validate
     
-    agent = create_agent(model=model, tools=[getUserInput,provideInformationToUser], system_prompt=sys, response_format=ToolStrategy(SourcesConfig))
+    agent = create_agent(model=model, tools=[getUserInput,provideInformationToUser], system_prompt=sys, response_format=SourcesConfig)
     
     accepted = False
     obj = None
-    while(accepted == False):    
+    while(accepted == False):
         resp = agent.invoke({ "messages": user_interactions })
-        #print(resp)
         obj = resp["structured_response"]        
 
         #Auto validation

@@ -12,7 +12,11 @@ class HadronsXML:
         for name, value in names_values:
             e = ET.SubElement(branch, name)
             e.text = str(value)
-        
+
+    @staticmethod
+    def createSubElement(of, name):
+        return ET.SubElement(of, name)
+            
     def __init__(self):
         self.root = ET.Element("grid")
         self.tree = ET.ElementTree(self.root)

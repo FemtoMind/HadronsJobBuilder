@@ -24,7 +24,7 @@ class Vector2ptObs(BaseModel):
    
 class ObservableInfo(BaseModel):
    """Information about an observable to be computed."""
-   obs_type: Union[Pion2ptObs,Vector2ptObs] = Field(...,description="The observation type and important knowledge.")
+   obs_type: Union[Pion2ptObs,Vector2ptObs] = Field(...,description="The observation type and important knowledge.", discriminator="type")
    user_info: str = Field(...,description="Any relevant information obtained from the user regarding the observable, such as "
                      "propagator masses, momenta, source/sink smearing, etc. "
                      "Use an empty string if no extra information is given.")

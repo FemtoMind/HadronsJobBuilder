@@ -50,6 +50,19 @@ SOURCES
         state.sources = identifySources(model, state, messages).sources
         checkpointState(state,ckpoint_file)
 
+
+    if state.eigensolvers == None:
+        Print("""
+======================
+EIGENSOLVERS
+======================
+        """) 
+        state.eigensolvers = setupEigenSolvers(model, state, messages).solvers
+        checkpointState(state,ckpoint_file)
+
+    #Add eigensolvers to messages
+    messages.append( HumanMessage("The following eigensolver instances have been identified based on user input:\n" + json.dumps(TypeAdapter(List[EigenSolverConfig]).dump_python(state.eigensolvers), indent=2) ) )
+        
     if state.solvers == None:
         Print("""
 ======================
