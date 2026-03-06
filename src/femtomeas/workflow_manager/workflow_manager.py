@@ -10,9 +10,9 @@ from pydantic import BaseModel, Field, ConfigDict, NonNegativeInt, TypeAdapter
 from typing import Literal, Union, List, Optional, Tuple
 from langchain.agents.structured_output import ToolStrategy, ProviderStrategy
 from langchain.agents import create_agent
-from .hadrons_xml import HadronsXML
+from femtomeas.meas_config_agent.hadrons_xml import HadronsXML
 import json
-from .common import *
+from femtomeas.meas_config_agent.common import *
 import os
 import io
 import pathlib

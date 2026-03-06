@@ -48,7 +48,8 @@ If more than one observable requires a propagator with the same source/solver co
     
 Propagator instance rules:    
 - Your list must include every propagator instance required for the observables, and only those. Do not invent instances.
-
+- You must reuse propagator instances that share the same source and solver
+    
 Your output must be in JSON format and adhere to the following schema:    
 """ + json.dumps(PropagatorsConfig.model_json_schema())
   
@@ -83,7 +84,7 @@ Your output must be in JSON format and adhere to the following schema:
         for r in obj.propagators:
             Print(r)
 
-        accepted = queryYesNo("Is this correct? [y/n]: ")
+        accepted = queryYesNo("Is this correct?")
         if(accepted == False):
             reason = Input("Explain what is wrong: ")
             user_interactions.append(HumanMessage(f"Your previous response was not accepted for the following reason: {reason}"))            

@@ -2,7 +2,7 @@ import os
 from .common import *
 from .state import *
 from .hadrons_xml import HadronsXML
-from . import workflow_manager as wfman
+import femtomeas.workflow_manager as wfman
 
 def agent(query, model, ckpoint_file="state.json", reload_state=True, output_xml_file="hadrons_run.xml"):
     if reload_state and os.path.exists(ckpoint_file):

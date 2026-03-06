@@ -72,7 +72,7 @@ Your list must include every observable explicitly mentioned, and only those obs
         for r in obj.observables:
             Print(r)
             
-        accepted = queryYesNo("Is this correct? [y/n]: ")
+        accepted = queryYesNo("Is this correct?")
         if(accepted == False):
             reason = Input("Explain what is wrong: ")
             user_interactions.append(HumanMessage(f"Your previous response was not accepted for the following reason: {reason}"))            

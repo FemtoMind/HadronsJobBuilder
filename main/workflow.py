@@ -1,5 +1,5 @@
 from langchain_openai import ChatOpenAI
-from hadrons_config import *
+from femtomeas import *
 
 local_llm = ChatOpenAI(
     model="gpt-oss-120b-GGUF",

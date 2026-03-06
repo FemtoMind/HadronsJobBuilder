@@ -1,5 +1,6 @@
-from hadrons_config.workflow_manager import *
+from femtomeas.workflow_manager import *
 import time
+import os
 
 key_path = os.getenv("NERSC_SFAPI_KEY_PATH")
 if key_path == None:

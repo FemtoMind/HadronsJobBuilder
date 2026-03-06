@@ -92,7 +92,7 @@ def provideInformationToUser(description: str):
 def queryYesNo(query: str)->bool:
     result = ""
     while(result not in ["y","n"]):    
-        result = Input(query)
+        result = Input(query + " [y/n]")
     return True if result == "y" else False
         
 

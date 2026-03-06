@@ -2,10 +2,17 @@
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 [project]
-name = "HadronsJobBuilder"
+name = "FemtoMeas"
 version = "0.1.0"
 dependencies = [
   "langchain",
   "langchain_openai",
-  "pathlib"
+  "pathlib",
+  "sfapi_client"
 ]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
