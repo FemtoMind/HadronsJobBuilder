@@ -1,4 +1,7 @@
-from femtomeas.workflow_manager import *
+from femtomeas.workflow_manager.sfapi import *
+from femtomeas.workflow_manager.api_general import *
+from femtomeas.workflow_manager.api_tools import *
+from femtomeas.workflow_manager.hadrons import *
 import time
 import os
 
@@ -80,5 +83,5 @@ if 0:
             break    
         time.sleep(10)
 
-
-globusCopyToMachine(machine, safe_dir, "dtn", "/global/cfs/cdirs/mp13/ckelly/globus_source_test_dir/test.dat")
+if 0:
+    globusCopyToMachine(machine, safe_dir, "dtn", "/global/cfs/cdirs/mp13/ckelly/globus_source_test_dir/test.dat")
