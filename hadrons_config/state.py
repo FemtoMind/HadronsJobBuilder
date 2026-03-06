@@ -28,7 +28,7 @@ class State(BaseModel):
     observables: List[ObservableInfo] | None = Field(None,description="The list of observables and associated relevant information")
     actions: List[ActionConfig] | None = Field(None,description="The list of action instances")
     sources: List[SourceConfig] | None = Field(None,description="The list of source instances")
-    eigensolvers: List[EigenSolverConfig] = Field(None,description="The list of eigensolver instances")
+    eigensolvers: List[EigenSolverConfig] | None = Field(None,description="The list of eigensolver instances")
     solvers: List[SolverConfig] | None = Field(None,description="The list of solver instances")
     propagators: List[PropagatorConfig] | None = Field(None,description="The list of propagator instances")
     observable_configs : List[ObservableConfig] | None = Field(None,description="The list of observable instances")

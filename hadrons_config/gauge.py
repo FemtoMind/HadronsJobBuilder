@@ -54,6 +54,52 @@ class GaugeFieldConfig(BaseModel):
     def setXML(self,xml):
         self.config.setXML(xml)
 
+
+def identifyGaugeConfigs(model, user_interactions: list[BaseMessage]) -> GaugeFieldConfig:
+    #This version uses the default structured output strategy
+    
+    sys = """
+You are an assistant responsible for identifying the lattice QCD propagator gauge configuration(s) to use for the calculation, based solely on user input.
+
+Your workflow:
+1. Identify based on user input whether the user wishes to use a unit or random gauge field, or else load one or more gauge configurations, and create the corresponding data structure. If the choice can be inferred based on previous user messages, you must ask the user to confirm your choice. If it cannot, or there is any ambiguity, you must ask the user.    
+2. Populate the parameters of the data structure. If a parameter value is unknown you must ask the user; never guess parameters.
+
+    
+User Query rules:
+- Use the getUserInput tool
+- If the user responds to a query with an invalid response, repeat the query until a valid response is provided. Never accept an invalid response.
+- Instead of answering your question, the user might respond to your query with a question. If this occurs, answer the user's question using provideInformationToUser tool and ensure the user is satisfied with a follow-up call to getUserInput. Once satisfied, repeat the original question.
+
+Your output must be in JSON format and adhere to the following schema:    
+""" + json.dumps(GaugeFieldConfig.model_json_schema())
+    
+    agent = create_agent(model=model, tools=[getUserInput,provideInformationToUser], system_prompt=sys, response_format = GaugeFieldConfig)
+    
+    accepted = False
+    obj = None
+    while(accepted == False):    
+        resp = agent.invoke({ "messages": user_interactions },     {"configurable": {"thread_id": "1"}})
+        obj = resp["structured_response"]        
+        
+        Print("Obtained gauge field parameters:", obj.config)
+
+        accepted = queryYesNo("Is this correct? [y/n]: ")
+        if(accepted == False):
+            reason = Input("Explain what is wrong: ")
+            user_interactions.append(HumanMessage(f"Your previous response was not accepted for the following reason: {reason}"))            
+    return obj
+
+
+
+
+
+
+
+
+
+
+        
 #This seems to be another one that confuses ToolStrategy, giving incorrect structured output
 @tool
 def setUnitGauge(runtime: ToolRuntime) -> None:
@@ -79,7 +125,9 @@ def setLoadGauge(stub : str, start: int, step: int, end: int, runtime : ToolRunt
 
     
 
-def identifyGaugeConfigs(model, user_interactions: list[BaseMessage]) -> GaugeFieldConfig:
+def identifyGaugeConfigsToolBased(model, user_interactions: list[BaseMessage]) -> GaugeFieldConfig:
+    #ToolStrategy can be flakey. This version uses explicit tooling
+    
     sys = """
 You are an assistant responsible for identifying the lattice QCD propagator gauge configuration(s) to use for the calculation, based solely on user input.
 

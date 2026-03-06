@@ -6,5 +6,6 @@ name = "HadronsJobBuilder"
 version = "0.1.0"
 dependencies = [
   "langchain",
-  "langchain_openai"
+  "langchain_openai",
+  "pathlib"
 ]

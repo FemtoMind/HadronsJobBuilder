@@ -2,8 +2,9 @@ import os
 from .common import *
 from .state import *
 from .hadrons_xml import HadronsXML
+from . import workflow_manager as wfman
 
-def agent(query, model, ckpoint_file="state.json", reload_state=True):    
+def agent(query, model, ckpoint_file="state.json", reload_state=True, output_xml_file="hadrons_run.xml"):
     if reload_state and os.path.exists(ckpoint_file):
         state = reloadStateCheckpoint(ckpoint_file)
         query = state.query
@@ -128,4 +129,8 @@ GAUGE CONFIGURATIONS
     for o in state.observable_configs:
         o.setXML(xml)
     
-    xml.write("hadrons_run.xml")
+    xml.write(output_xml_file)
+
+    if queryYesNo("Would you like FemtoMind to run and manage the measurement workflow?"):
+        wfman.manageWorkflow(model, output_xml_file)
+    
