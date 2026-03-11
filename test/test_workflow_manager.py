@@ -83,5 +83,11 @@ if 0:
             break    
         time.sleep(10)
 
-if 0:
-    globusCopyToMachine(machine, safe_dir, "dtn", "/global/cfs/cdirs/mp13/ckelly/globus_source_test_dir/test.dat")
+if 1:
+    tid = globusCopyToMachine(machine, safe_dir, "dtn", "/global/cfs/cdirs/mp13/ckelly/globus_source_test_dir", block_until_complete=True)
+#    for i in range(10):
+#        print(globusTransferStatus(machine, tid))
+#        time.sleep(2)
+
+if 1:
+    globusCopyFromMachine("dtn", "/global/cfs/cdirs/mp13/ckelly/globus_source_test_dir/copyback",  machine, safe_dir + "/test.dat", block_until_complete=True)
