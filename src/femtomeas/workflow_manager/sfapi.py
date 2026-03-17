@@ -6,7 +6,7 @@ import pathlib
 import io
 import json
 from typing import Literal, Union, List, Optional, Tuple
-from .api_general import checkSafePath
+from .utils import checkSafePath
 from . import globals
 import time
 
