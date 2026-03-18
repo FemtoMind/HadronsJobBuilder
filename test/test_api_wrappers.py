@@ -119,6 +119,9 @@ if 0:
         time.sleep(10)
 
 if 0:
+    print(globusTransferStatus(machine, "1234"))
+        
+if 1:
     tid = globusCopyToMachine(machine, safe_dir, "dtn", "/global/cfs/cdirs/mp13/ckelly/globus_source_test_dir", block_until_complete=True)
     for i in range(10):
         print(globusTransferStatus(machine, tid))
