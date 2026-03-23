@@ -17,7 +17,7 @@ class HadronsXML:
     def createSubElement(of, name):
         return ET.SubElement(of, name)
 
-    def load(self, filename):
+    def read(self, filename):
         self.tree = ET.parse(filename)
         self.root = self.tree.getroot()
 
