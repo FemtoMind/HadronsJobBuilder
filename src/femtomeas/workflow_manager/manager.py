@@ -418,3 +418,17 @@ class JobManager:
         with self._lock:
             return op_lambda(self.job_data)
         
+    def __enter__(self):
+        """
+        Allow the user to acquire a lock on the database for manipulation using 'with'
+        """
+        self._lock.acquire()
+        return self.job_data
+        
+    def __exit__(self,exc_type, exc_val, exc_tb):
+        self._lock.release() #unlock before exception!
+        if exc_type:
+            raise Exception("Caught exception",exc_type,exc_val,exc_tb)
+            
+
+    

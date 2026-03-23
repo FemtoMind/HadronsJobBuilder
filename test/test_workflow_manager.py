@@ -87,10 +87,11 @@ if 1:
     t2 = HadronsComputeAction(machine="Perlmutter",account="amsc013_g",queue="debug", time="300", spec=spec, mpi=(1,1,1,2) )
     t3 = TransferFromAction("Perlmutter","/path/to/src","dtn","/path/to/dest")
 
-    jobid = jman(lambda jd: jd.enqueueJob([t1,t2,t3]))
-    jman(lambda jd: jd.startWorkflows([jobid]))
+    with jman as jd:
+        jobid = jd.enqueueJob([t1,t2,t3])
+        jd.startWorkflows([jobid])
+        status = jd.jobStatus(jobid)
     
-    status = jman(lambda jd: jd.jobStatus(jobid))
     while status['head_action_class'] != ActionClass.NONE:
         time.sleep(2)
         status = jman(lambda jd: jd.jobStatus(jobid))
