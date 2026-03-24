@@ -211,8 +211,9 @@ class ComputeActions(ActionManager):
 
     
 class JobData:
-    def __init__(self, filename: str | None = None):
+    def __init__(self, filename: str | None = None, max_workflows_active=10):
         db_path = ":memory:" if filename is None else str(Path(filename).expanduser())
+        self.max_workflows_active = max_workflows_active
         self.conn = sqlite3.connect(db_path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         
@@ -322,9 +323,25 @@ class JobData:
  
 
 
-    def startWorkflows(self, job_ids : list):
+    def startWorkflows(self, job_ids : list | None = None):
+        """
+        Start the workflows specified by the list of job ids. If None, additional workflows will be started until the total number of active workflows reaches the maximum
+        """
+        if job_ids == None:        
+            with self.conn as conn:
+                count = int(conn.execute("SELECT COUNT(*) FROM jobs WHERE head_action_status = ?", (ActionStatus.ACTIVE.name,) ).fetchone()[0])
+                rem =  self.max_workflows_active - count
+                print("Number of active workflows",count,"want to activate",rem,"more")
+
+                if rem > 0:
+                    toschedule = conn.execute("SELECT job_id FROM jobs WHERE head_action_status = ? ORDER BY job_id ASC LIMIT ?", (ActionStatus.PENDING.name, rem)).fetchall()                   
+                    job_ids = [ j[0] for j in toschedule ]
+                    print("Activating",len(job_ids),"workflows with job ids", job_ids)
+                    
         self.progressWorkflows(("VALID_IN",job_ids))
-        
+                        
+
+
     def progressActiveWorkflows(self):
         """
         Find COMPLETE actions and initiate the next stage of the workflow
@@ -369,14 +386,26 @@ class JobData:
         self.progressActiveActions(poll_freq=poll_freq, force_poll=force_poll)
         self.progressActiveWorkflows()
     
+    def countWorkflowsWithStatus(self, statuses : ActionStatus | list[ActionStatus]):
+        with self.conn as conn:
+            if isinstance(statuses, ActionStatus):            
+                return int(conn.execute("SELECT COUNT(*) FROM jobs WHERE head_action_status = ?", (statuses.name,) ).fetchone()[0])
+            elif isinstance(statuses, list):
+                placeholders = ",".join("?" for _ in statuses)
+                names = [s.name for s in statuses]                
+                return int(conn.execute(f"SELECT COUNT(*) FROM jobs WHERE head_action_status IN ({placeholders})", (*names,) ).fetchone()[0])
+            else:
+                raise Exception("Unexpected type for 'statuses'", type(statuses))
+
         
 class JobManager:
-    def __init__(self, filename: str | None = None, poll_freq=30):
+    def __init__(self, filename: str | None = None, poll_freq=30, max_workflows_active=10):
         """
         poll_freq: how often the action monitors poll the API for status updates
+        max_workflows_active: if >0, the manager will attempt to maintain this many active workflows, activating more when others finish; if 0, they must be activated manually
         """
         
-        self.job_data = JobData(filename)
+        self.job_data = JobData(filename, max_workflows_active=max_workflows_active)
         self._stop = threading.Event()
         self._thread = None
         self._lock = threading.Lock()
@@ -389,7 +418,19 @@ class JobManager:
         self._thread = threading.Thread(target=self._run)
         self._thread.start()
 
-    def stop(self):
+    def stop(self, wait_until_done=True):
+        """
+        Ask the manager thread to stop and wait until it does.
+        wait_until_done : block until there are no more active or pending workflows before stopping (default True)
+        """
+        def __nincomplete():
+            with self._lock:
+                return self.job_data.countWorkflowsWithStatus([ ActionStatus.PENDING, ActionStatus.ACTIVE ])
+        
+        if wait_until_done:
+            while(__nincomplete() > 0):
+                time.sleep(2)
+        
         self._stop.set()
 
         if self._thread is not None:
@@ -399,7 +440,7 @@ class JobManager:
         self._lock.acquire()
         
         while not self._stop.is_set():
-            #A safe checkpoint for allowing the user to modify the state
+            #A safe checkpoint for allowing the user to obtain a lock and modify the state (e.g. manually activating workflows, restarting after failure, etc)
             self._lock.release()
             time.sleep(0.5)
             self._lock.acquire()
@@ -407,7 +448,8 @@ class JobManager:
             if self._stop.is_set():
                 break
 
-            self.job_data.progressActiveState(poll_freq=self.poll_freq)
+            self.job_data.startWorkflows() #start new workflows as required
+            self.job_data.progressActiveState(poll_freq=self.poll_freq) #attempt to progress active workflows
             time.sleep(2)
         self._lock.release()
 
