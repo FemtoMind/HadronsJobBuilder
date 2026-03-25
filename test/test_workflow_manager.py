@@ -5,12 +5,13 @@ from femtomeas.workflow_manager.api_general import setupWorkflowAgent
 from femtomeas.workflow_manager.manager import *
 from femtomeas.workflow_manager.hadrons import setHadronsInfo
 from femtomeas.meas_config_agent.hadrons_xml import HadronsXML
-
+from femtomeas.workflow_manager.manager_config import readManagerConfig
 import time
 
 setupWorkflowAgent("/path/to/key", { "Perlmutter" : "/path/to/sandbox" })
 setHadronsInfo({ "Perlmutter" : { "bin" : "/global/u2/c/ckelly/CPS/install_mpi_pm_new/Hadrons_pm_new/bin",    "env" : "source /global/u2/c/ckelly/CPS/bld/grid_pm_develop/sourceme.sh" } } )
 
+#readManagerConfig("man_config.json")
 
 xml = HadronsXML()
 xml.read("hadrons_run.xml")

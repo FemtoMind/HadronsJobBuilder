@@ -12,14 +12,19 @@ from .hadrons import submitHadronsJob
 from . import globals
 
 from enum import Enum
+import re
+
+def replaceJobIdSubstring(in_str, job_id):
+    """Replace instances of <JOBID> with the job index in path strings"""
+    return re.sub(r'<JOBID>', str(job_id), in_str)
 
 class HadronsJobSpec:
-    job_subdir : str #Job directory relative to base sandbox. The actual job will be executed within a subdirectory of this named by the id to ensure uniqueness
-    xml_spec : bytes #The XML spec as a bytestring
+    job_rundir : str #Job run directory. The <JOBID> substring will be replaced by the job index if present
+    xml_spec : bytes #The HadronsXML spec as a bytestring
     grid : Tuple[int,int,int,int]
 
-    def __init__(self, job_subdir, xml : HadronsXML, grid):
-        self.job_subdir = job_subdir
+    def __init__(self, job_rundir, xml : HadronsXML, grid):
+        self.job_rundir = job_rundir
         self.xml_spec = xml.toBytes()
         self.grid = grid
 
@@ -28,7 +33,7 @@ class HadronsJobSpec:
         xml.fromBytes(self.xml_spec)
         xmlstr = xml.toString()
         
-        return f"HadronsJobSpec(job_subdir={self.job_subdir}, xml_spec={xmlstr}, grid={self.grid})"
+        return f"HadronsJobSpec(job_rundir={self.job_rundir}, xml_spec={xmlstr}, grid={self.grid})"
 
     def writeXML(self, filename):
         xml = HadronsXML()
@@ -39,26 +44,36 @@ class HadronsJobSpec:
 @dataclass
 class TransferActionBase:
     pass
-        
+
 @dataclass
 class TransferToAction(TransferActionBase):
-    source_endpoint: str
+    #The <JOBID> substring will be replaced by the job index if present in the path strings
+    source_endpoint: str 
     source_path: str
     machine: str
     dest_path: str
 
     def initiateAction(self, job_id)-> str:
-        return globusCopyToMachine(self.machine, self.dest_path, self.source_endpoint, self.source_path)
+        assert self.machine in globals.remote_workdir
+        source_path = replaceJobIdSubstring(self.source_path, job_id)
+        dest_path = replaceJobIdSubstring(self.dest_path, job_id)
+        
+        return globusCopyToMachine(self.machine, dest_path, self.source_endpoint, source_path)
     
 @dataclass
 class TransferFromAction(TransferActionBase):
+    #The <JOBID> substring will be replaced by the job index if present in the path strings
     machine: str
     source_path: str
     dest_endpoint: str
     dest_path: str
-
+    
     def initiateAction(self, job_id)-> str:
-        return globusCopyFromMachine(self.dest_endpoint, self.dest_path, self.machine, self.source_path)
+        assert self.machine in globals.remote_workdir
+        source_path = replaceJobIdSubstring(self.source_path, job_id)
+        dest_path = replaceJobIdSubstring(self.dest_path, job_id)
+        
+        return globusCopyFromMachine(self.dest_endpoint, dest_path, self.machine, source_path)
     
 @dataclass
 class ComputeActionBase:
@@ -77,7 +92,7 @@ class HadronsComputeAction(ComputeActionBase):
         self.spec.writeXML(xml_file)
         assert self.machine in globals.remote_workdir
         
-        rundir = globals.remote_workdir[self.machine] + "/" + self.spec.job_subdir + f"/{job_id}"
+        rundir = replaceJobIdSubstring(self.spec.job_rundir, job_id)
         print(f"Job {job_id} machine {self.machine} rundir {rundir}")
         return submitHadronsJob(self.machine, xml_file, rundir, self.account, self.queue, self.time, self.spec.grid, self.mpi)
 
@@ -181,7 +196,7 @@ class ActionManager:
         """Blocking wait until the action either completes or fails. Status checks are performed every check_freq seconds. Return the final status."""
         while( (action_status := self.queryStatus(action_id,force_update=True)[0] ) == ActionStatus.ACTIVE):
             time.sleep(check_freq)
-        return status
+        return action_status
 
 class DataTransfers(ActionManager):
     def __init__(self, connection : sqlite3.Connection):

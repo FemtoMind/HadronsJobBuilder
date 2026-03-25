@@ -5,6 +5,7 @@ from . import globals
 
 def setupWorkflowAgent(key_path, work_dir : dict):
     globals.remote_workdir=work_dir
+    print("WORKDIR", globals.remote_workdir)
 
 tid = 0
 transfers = { }
