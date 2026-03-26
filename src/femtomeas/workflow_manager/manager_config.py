@@ -4,7 +4,8 @@ from .api_general import setupWorkflowAgent
 from .hadrons import setHadronsInfo
 
 class WorkflowConfig(BaseModel):
-    key_path: str = Field(..., description="The path to the Superfacility API key")
+    sfapi_key_path: str = Field(..., description="The path to the Superfacility API key")
+    iriapi_key_path: str = Field(..., description="The path to the IRI API key (will be created if doesn't yet exist)")
     sandbox_directories: dict[str, str] = Field(..., description="A map of machine names to base sandbox directories")
 
 class HadronsConfig(BaseModel):
@@ -21,5 +22,5 @@ def readManagerConfig(filename):
     except ValidationError as e:
         raise Exception(f"Could not parse manager config {filename}: {e}")
 
-    setupWorkflowAgent(config.workflow.key_path, config.workflow.sandbox_directories)
+    setupWorkflowAgent(config.workflow.sfapi_key_path, config.workflow.iriapi_key_path, config.workflow.sandbox_directories)
     setHadronsInfo(config.model_dump()["hadrons"])

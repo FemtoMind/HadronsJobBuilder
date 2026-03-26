@@ -4,7 +4,7 @@ from .state import *
 from .hadrons_xml import HadronsXML
 import femtomeas.workflow_manager as wfman
 
-def agent(query, model, ckpoint_file="state.json", reload_state=True)-> State :
+def agent(query, model, ckpoint_file="state.json", reload_state=False)-> State :
     if reload_state and os.path.exists(ckpoint_file):
         state = reloadStateCheckpoint(ckpoint_file)
         query = state.query

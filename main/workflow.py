@@ -89,13 +89,7 @@ if __name__ == "__main__":
 
     write_xml_file = args.write_xml
     write_xml = args.write_xml is not None
-
-    jman = None
-    if args.execute_workflow is not None:
-        readManagerConfig(args.execute_workflow)
-        jman = JobManager("jobs.db")
-        jman.start()
-    
+   
     if not args.skip_agent:
         query = "" if reload_checkpoint else input("Describe the observables you wish to compute: ")
         state = agent(query, llm, reload_state=reload_checkpoint, ckpoint_file=reload_checkpoint_file)
@@ -103,12 +97,19 @@ if __name__ == "__main__":
         if write_xml:
             state.toHadronsXML().write(write_xml_file)  #note, if the XML uses non-local files it cannot be used directly
 
-        if args.execute_workflow is not None:
+    #Start the job manager
+    jman = None
+    if args.execute_workflow is not None:
+        readManagerConfig(args.execute_workflow)
+        jman = JobManager("jobs.db")
+        jman.start()
+        
+        if not args.skip_agent:
             #For now we just use Perlmutter and an 8^4 configuration with 1 rank for simplicity
             mpi = (1,1,1,1)
             grid= (8,8,8,8)
             machine = "Perlmutter"
             enqueueStandardHadronsWorkflow(state, jman, mpi, grid, machine, "test_group", "amsc013_g", "debug", "300")
 
-    if jman:
+        
         jman.stop() #will wait until the job queue is complete

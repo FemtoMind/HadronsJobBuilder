@@ -5,19 +5,20 @@ import time
 import stat
 import os
 import json
-from femtomeas.workflow_manager.iri_api import executeBatchJobTest
+from femtomeas.workflow_manager.manager_config import readManagerConfig
+import sys
 
-key_path = os.getenv("NERSC_SFAPI_KEY_PATH")
-if key_path == None:
-    raise Exception("Expect environment variable NERSC_SFAPI_KEY_PATH")
+if len(sys.argv) == 1:
+    raise Exception("Must provide the manager configuration JSON")
+
+readManagerConfig(sys.argv[1])
 
 machine = "Perlmutter"
-safe_dir = "/global/cfs/cdirs/mp13/ckelly/agent_safe_dir" #home is mounted read-only on PM
-setupWorkflowAgent(key_path, { machine : safe_dir }  )
-
+safe_dir = globals.remote_workdir[machine]
 print("Machine",machine, "is up?:", queryMachineStatus(machine))
 
-if 0:
+if 1:
+    print("TESTING BATCH JOB SUBMISSION")
     jobid = executeBatchJobCompat(machine, '''echo -e '#!/bin/bash\necho "Hello from ${SLURM_PROCID}"' > script.sh
     chmod u+x script.sh
     srun -n 4 ./script.sh
@@ -121,7 +122,7 @@ if 0:
 if 0:
     print(globusTransferStatus(machine, "1234"))
         
-if 1:
+if 0:
     tid = globusCopyToMachine(machine, safe_dir, "dtn", "/global/cfs/cdirs/mp13/ckelly/globus_source_test_dir", block_until_complete=True)
     for i in range(10):
         print(globusTransferStatus(machine, tid))
