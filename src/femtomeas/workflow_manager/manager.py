@@ -350,7 +350,7 @@ class JobData:
                 if rem > 0:
                     toschedule = conn.execute("SELECT job_id FROM jobs WHERE head_action_status = ? ORDER BY job_id ASC LIMIT ?", (ActionStatus.PENDING.name, rem)).fetchall()                   
                     job_ids = [ j[0] for j in toschedule ]
-                    if len(job_ids > 0):
+                    if len(job_ids) > 0:
                         print("Number of active workflows",count,"want to activate",rem,"more")
                         print("Activating",len(job_ids),"workflows with job ids", job_ids)
                     
