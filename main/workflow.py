@@ -84,7 +84,7 @@ llm = amsc_llm_0t
 if __name__ == "__main__":
     args = parse_args()
 
-    reload_checkpoint_file = args.reload_checkpoint
+    reload_checkpoint_file = args.reload_checkpoint if args.reload_checkpoint is not None else "ckpoint_state.json" #NB: argparse default argument (const) is only used if the arg is specified but a value not provided, not when the arg is not specified
     reload_checkpoint = args.reload_checkpoint is not None
 
     write_xml_file = args.write_xml
