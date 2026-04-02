@@ -42,7 +42,10 @@ async def websocket_endpoint(websocket: WebSocket):
     assert server_workflow != None
     
     await websocket.accept()
-
+    global send_queue, recv_queue
+    send_queue = asyncio.Queue()
+    recv_queue = asyncio.Queue()
+    
     async def sender():
         while True:
             msg = await send_queue.get()
