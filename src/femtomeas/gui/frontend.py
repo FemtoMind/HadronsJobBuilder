@@ -5,8 +5,9 @@ from dash_chat import ChatComponent
 import dash_extensions as de
 from dash.exceptions import PreventUpdate
 import dash_ag_grid as dag
+import dash_bootstrap_components as dbc
 
-app_dash = dash.Dash(__name__) #mount on / instead
+app_dash = dash.Dash(__name__)#   , external_stylesheets=[dbc.themes.SLATE]) #mount on / instead
 
 app_dash.layout = html.Div([
     de.WebSocket(url="ws://localhost:8050/ws", id="ws"),    
@@ -20,6 +21,7 @@ app_dash.layout = html.Div([
     ChatComponent(
         id="chat-component",
         messages=[],
+        class_name = 'my-chat'
     )
     ])
 ])

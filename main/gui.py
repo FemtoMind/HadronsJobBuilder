@@ -12,6 +12,7 @@ from femtomeas.meas_config_agent import agent
 
 common.print_func = printToSocket
 common.input_func = inputFromSocket
+common.output_style = "markdown"
 
 amsc_llm_0t = ChatOpenAI(
     model="gpt-oss-120b",
