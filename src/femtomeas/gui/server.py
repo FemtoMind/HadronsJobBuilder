@@ -6,6 +6,7 @@ import io
 import time
 import asyncio
 import websockets
+import json
 
 app = FastAPI()
 
@@ -15,21 +16,21 @@ async def capture_loop():
    global main_loop
    main_loop = asyncio.get_running_loop()
 
-send_queue = asyncio.Queue()
-recv_queue = asyncio.Queue()
-    
-def printToSocket(*args, **kwargs):
+agent_print_queue = asyncio.Queue()
+
+def agentPrint(*args, **kwargs):
     buf = io.StringIO()
     print(*args, *kwargs, file=buf)
     msg = buf.getvalue()
     
-    asyncio.run_coroutine_threadsafe(send_queue.put(msg), main_loop).result()
+    asyncio.run_coroutine_threadsafe(agent_print_queue.put(msg), main_loop).result()
     time.sleep(0.3) #allows successive calls to print to all render correctly
+
+agent_recv_user_queue = asyncio.Queue()
     
-def inputFromSocket(query):
-    msg = query
-    asyncio.run_coroutine_threadsafe(send_queue.put(msg), main_loop).result()
-    return asyncio.run_coroutine_threadsafe(recv_queue.get(), main_loop).result().strip()
+def agentQuery(query):
+    asyncio.run_coroutine_threadsafe(agent_print_queue.put(query), main_loop).result()
+    return asyncio.run_coroutine_threadsafe(agent_recv_user_queue.get(), main_loop).result().strip()
 
 server_workflow = None
 
@@ -42,26 +43,43 @@ async def websocket_endpoint(websocket: WebSocket):
     assert server_workflow != None
     
     await websocket.accept()
-    global send_queue, recv_queue
-    send_queue = asyncio.Queue()
-    recv_queue = asyncio.Queue()
-    
-    async def sender():
-        while True:
-            msg = await send_queue.get()
-            await websocket.send_text(msg)
+    global agent_print_queue, agent_recv_user_queue
+    agent_print_queue = asyncio.Queue() #reset
+    agent_recv_user_queue = asyncio.Queue()
 
+    #Task that sends agent output to the frontend
+    async def agent_print_sender():
+        while True:
+            msg = await agent_print_queue.get()
+            await websocket.send_json({"task": "agent_output", "content": msg})
+
+    start_event = asyncio.Event()
+
+    #Arguments to agent start
+    state_file = None
+    reload_state = None
+   
+    #Task that receives input from the frontend and redirects as appropriate            
     async def receiver():
         while True:
-            msg = await websocket.receive_text()
-            await recv_queue.put(msg)
-
+            msg = await websocket.receive_json()
+            if msg['task'] == 'user_response':
+               await agent_recv_user_queue.put(msg['content'])
+            elif msg['task'] == 'start':
+               nonlocal state_file, reload_state, start_event
+               start = json.loads(msg['content'])
+               state_file = start['state_file']
+               reload_state = start['reload_state']
+               start_event.set()
+               
     try:
-        sender_task = asyncio.create_task(sender())
+        agent_print_task = asyncio.create_task(agent_print_sender())
         receiver_task = asyncio.create_task(receiver())
-        await main_loop.run_in_executor(None, server_workflow)
+
+        await start_event.wait()
+        await main_loop.run_in_executor(None, server_workflow, state_file, reload_state)
         
-        sender_task.cancel()
+        agent_print_task.cancel()
         receiver_task.cancel()
         
         while True:
