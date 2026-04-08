@@ -22,10 +22,11 @@ amsc_llm_0t = ChatOpenAI(
 
 llm = amsc_llm_0t
 
-def workflow(state_file : str, reload_state : bool):
-    query = "" if reload_state else agentQuery("Describe the observables you wish to compute")
-    state = agent(query, llm, ckpoint_file=state_file, reload_state=reload_state)
-    state.toHadronsXML().write("hadrons_run.xml")
+def workflow(config : dict):
+    if config["use_agent"]:
+        query = "" if config["reload_state"] else agentQuery("Describe the observables you wish to compute")
+        state = agent(query, llm, ckpoint_file=config["state_file"], reload_state=config["reload_state"])
+        state.toHadronsXML().write("hadrons_run.xml")
 
 
 setServerWorkflow(workflow)

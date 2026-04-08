@@ -13,7 +13,7 @@ app_dash = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 #                     )#   , external_stylesheets=[dbc.themes.SLATE]) #mount on / instead
 
 
-chat_tab = dbc.Container(
+startup_controls = dbc.Container(
     [
         dbc.Card(
             dbc.CardBody(
@@ -27,15 +27,18 @@ chat_tab = dbc.Container(
                         debounce=True,
                     ),
                     dbc.Checklist(
-                        id="reload-state",
-                        options=[{"label": "Reload the state file if it exists", "value": "reload"}],
-                        value=[],
+                        id="options-switches",
+                        options=[{"label": "Reload the state file if it exists", "value": "reload_state"},
+                                 {"label": "Run the workflow agent", "value": "use_agent"},
+                                 {"label": "Run the workflow manager", "value": "use_workflow_manager"}
+                                 ],
+                        value=["use_agent", "use_workflow_manager"],
                         switch=True,
                         className="mt-3",
                     ),
                     dbc.Button(
-                        "Start agent",
-                        id="start-agent",
+                        "Start",
+                        id="start",
                         color="primary",
                         className="mt-3",
                     )
@@ -43,17 +46,19 @@ chat_tab = dbc.Container(
             ),
             className="mb-3",
         ),
-        html.Div(
-            id="chat-wrapper",
-            style={"display": "none"},
-            children=[
-                ChatComponent(
-                    id="chat-component",
-                    messages=[],
-                    class_name="my-chat",
-                )
-            ],
-        ),
+    ],
+    fluid=True,
+    className="py-3",
+)
+
+
+chat_tab = dbc.Container(
+    [
+      ChatComponent(
+        id="chat-component",
+        messages=[],
+        class_name="my-chat",
+      )
     ],
     fluid=True,
     className="py-3",
@@ -77,12 +82,14 @@ job_tab = dbc.Container(
 
 app_dash.layout = html.Div([
     de.WebSocket(url="ws://localhost:8050/ws", id="ws"),
-    dcc.Tabs(id="tabs", value="chatbot", children=[
-        dcc.Tab(label="Workflow Creation Agent", value="chatbot"),
-        dcc.Tab(label="Job Monitor", value="job_status")
-    ]),
-    html.Div(id="chat-tab-pane", children=chat_tab),
-    html.Div(id="job-tab-pane", children=job_tab)
+    html.Div(id="startup-controls", children=startup_controls),
+    
+    html.Div(id="tabs-wrapper", children=[
+      dcc.Tabs(id="tabs"),
+      html.Div(id="chat-tab-pane", children=chat_tab),
+      html.Div(id="job-tab-pane", children=job_tab)    
+    ], style={"display": "none"}),
+
 ])
 
 @callback(
@@ -95,26 +102,42 @@ def toggle_tabs(active_tab):
         return {"display": "block"}, {"display": "none"}
     return {"display": "none"}, {"display": "block"}
 
+def setupTabs(use_agent: bool, use_wflow_man : bool):
+    tabs_children = []
+    if use_agent and use_wflow_man:
+        tabs_children.append( dcc.Tab(label="Workflow Creation Agent", value="chatbot") )        
+        tabs_children.append( dcc.Tab(label="Job Monitor", value="job_status") )
+    tabs_value = "chatbot" if use_agent else "job_status"
+    return tabs_children, tabs_value
 
 @callback(
-    Output("chat-wrapper", "style"),
-    Output("start-agent", "disabled"),
-    Output("ws","send",allow_duplicate=True),
-    Input("start-agent", "n_clicks"),
+    Output("tabs-wrapper", "style"), #switch on the tabs
+    Output("tabs", "children"), #populate the active tabs
+    Output("tabs", "value"), #set default tab
+    Output("startup-controls", "style"), #hide control panel
+    Output("start", "disabled"), #disable start button
+    Output("ws","send",allow_duplicate=True), #sent start signal to backend
+    Input("start", "n_clicks"),
     State("state-file", "value"),
-    State("reload-state", "value"),
+    State("options-switches", "value"),
     prevent_initial_call=True,
 )
-def start_agent(n_clicks, state_file, reload_values):
+def start_agent(n_clicks, state_file, option_values):
     if not n_clicks:
         raise PreventUpdate
 
-    state_file = (state_file or "").strip() or "ckpoint_state.json"
-    reload_state = "reload" in (reload_values or [])
-
-    agent_config = {"state_file": state_file, "reload_state": reload_state}
+    option_values = option_values or []
     
-    return {"display": "block"}, True, json.dumps({'task' : 'start', 'content' : json.dumps(agent_config)})
+    state_file = (state_file or "").strip() or "ckpoint_state.json"
+    reload_state = "reload_state" in option_values
+    use_agent = "use_agent" in option_values
+    use_workflow_manager = "use_workflow_manager" in option_values
+    
+    workflow_config = {"state_file": state_file, "reload_state": reload_state, "use_agent" : use_agent, "use_workflow_manager" : use_workflow_manager }
+
+    tabs_children, tabs_value = setupTabs(use_agent, use_workflow_manager)
+    
+    return {"display": "block"}, tabs_children, tabs_value,  {"display" : "none" },  True,  json.dumps({'task' : 'start', 'content' : json.dumps(workflow_config)})
 
 @callback( Output("chat-component", "messages", allow_duplicate=True),
            Input("ws", "message"),

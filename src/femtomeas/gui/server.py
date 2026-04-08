@@ -56,8 +56,7 @@ async def websocket_endpoint(websocket: WebSocket):
     start_event = asyncio.Event()
 
     #Arguments to agent start
-    state_file = None
-    reload_state = None
+    workflow_config = None
    
     #Task that receives input from the frontend and redirects as appropriate            
     async def receiver():
@@ -66,10 +65,8 @@ async def websocket_endpoint(websocket: WebSocket):
             if msg['task'] == 'user_response':
                await agent_recv_user_queue.put(msg['content'])
             elif msg['task'] == 'start':
-               nonlocal state_file, reload_state, start_event
-               start = json.loads(msg['content'])
-               state_file = start['state_file']
-               reload_state = start['reload_state']
+               nonlocal workflow_config
+               workflow_config = json.loads(msg['content'])
                start_event.set()
                
     try:
@@ -77,7 +74,7 @@ async def websocket_endpoint(websocket: WebSocket):
         receiver_task = asyncio.create_task(receiver())
 
         await start_event.wait()
-        await main_loop.run_in_executor(None, server_workflow, state_file, reload_state)
+        await main_loop.run_in_executor(None, server_workflow, workflow_config)
         
         agent_print_task.cancel()
         receiver_task.cancel()
