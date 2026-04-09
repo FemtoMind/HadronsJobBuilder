@@ -4,7 +4,7 @@ globals.api_impl = os.getenv('FEMTOMEAS_API_IMPL', 'IRI')
 
 from langchain_openai import ChatOpenAI
 from femtomeas.meas_config_agent import agent
-from femtomeas.workflow_manager.manager_config import readManagerConfig
+from femtomeas.workflow_manager.manager_config import readManagerConfigFile
 from femtomeas.workflow_manager.manager import JobManager
 from femtomeas.workflow_manager.hadrons_workflow import enqueueStandardHadronsWorkflow
 
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     #Start the job manager
     jman = None
     if args.execute_workflow is not None:
-        readManagerConfig(args.execute_workflow)
+        readManagerConfigFile(args.execute_workflow)
         jman = JobManager("jobs.db")
         jman.start()
         
