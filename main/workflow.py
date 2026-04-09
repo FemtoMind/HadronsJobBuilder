@@ -1,7 +1,4 @@
 import os
-import femtomeas.workflow_manager.globals as globals
-globals.api_impl = os.getenv('FEMTOMEAS_API_IMPL', 'IRI')
-
 from langchain_openai import ChatOpenAI
 from femtomeas.meas_config_agent import agent
 from femtomeas.workflow_manager.manager_config import readManagerConfigFile

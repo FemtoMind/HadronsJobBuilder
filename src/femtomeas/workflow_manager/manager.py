@@ -321,7 +321,7 @@ class JobData:
         head_action_updates = [] #(job_id, head_action_id, head_action_status)                
         #Initiate pending actions
         for action_class, action, job_id in pending_actions:
-            wfmanLog(f"Setting up new {action_class.name} for {job_id}:", action)
+            wfmanLog(f"Initiating action of type {action_class.name} for {job_id}")
             aman = self.action_man[action_class]
             action_id = aman.startAction(action, job_id)
             action_status, _ = aman.queryStatus(action_id)

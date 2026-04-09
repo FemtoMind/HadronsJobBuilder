@@ -9,10 +9,7 @@ from femtomeas.workflow_manager.hadrons_workflow import enqueueStandardHadronsWo
 import time
 import os
 import json
-import femtomeas.workflow_manager.globals as globals
 import femtomeas.workflow_manager.logging as wfman_logging
-
-globals.api_impl = os.getenv('FEMTOMEAS_API_IMPL', 'IRI')
 
 from langchain_openai import ChatOpenAI
 from femtomeas.meas_config_agent import agent
