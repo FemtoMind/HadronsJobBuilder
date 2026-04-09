@@ -2,6 +2,7 @@ from typing import Tuple
 from femtomeas.meas_config_agent.state import State
 from .manager import JobManager, TransferToAction, TransferFromAction, HadronsComputeAction, HadronsJobSpec
 from . import globals
+from .logging import wfmanLog
 
 def enqueueStandardHadronsWorkflow(state : State, jman : JobManager,
                             mpi : Tuple[int,int,int,int], grid : Tuple[int,int,int,int],
@@ -15,7 +16,7 @@ def enqueueStandardHadronsWorkflow(state : State, jman : JobManager,
     job_dir = globals.remote_workdir[machine] + f"/{group_name}/<JOBID>"
     cfg_staging_dir = globals.remote_workdir[machine] + f"/{group_name}/configurations"
 
-    print("enqueueStandardHadronsWorkflow is queueing",len(configs),"configurations:", configs)
+    wfmanLog("enqueueStandardHadronsWorkflow is queueing",len(configs),"configurations:", configs)
     for i in range(len(configs)):
         workflow = []
 

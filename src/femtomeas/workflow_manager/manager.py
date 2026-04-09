@@ -10,6 +10,7 @@ import threading
 from .api_general import *
 from .hadrons import submitHadronsJob
 from . import globals
+from .logging import wfmanLog
 
 from enum import Enum
 import re
@@ -39,7 +40,7 @@ class HadronsJobSpec:
         xml = HadronsXML()
         xml.fromBytes(self.xml_spec)
         xml.write(filename)
-        print("XML written to",filename)
+        wfmanLog("XML written to",filename)
         
 @dataclass
 class TransferActionBase:
@@ -93,7 +94,7 @@ class HadronsComputeAction(ComputeActionBase):
         assert self.machine in globals.remote_workdir
         
         rundir = replaceJobIdSubstring(self.spec.job_rundir, job_id)
-        print(f"Job {job_id} machine {self.machine} rundir {rundir}")
+        wfmanLog(f"Job {job_id} machine {self.machine} rundir {rundir}")
         return submitHadronsJob(self.machine, xml_file, rundir, self.account, self.queue, self.time, self.spec.grid, self.mpi)
 
 class ActionClass(Enum):
@@ -305,7 +306,7 @@ class JobData:
                 next_action_class = ActionClass.NONE if next_action == None else actionClass(next_action)
                 next_action_status = ActionStatus.COMPLETED if next_action == None else ActionStatus.PENDING
                 
-                print(f"Progressing job {job_id} action {a['head_action_type']} status {a['head_action_status']} to action {type(next_action).__name__}")
+                wfmanLog(f"Progressing job {job_id} action {a['head_action_type']} status {a['head_action_status']} to action {type(next_action).__name__}")
                 
                 #Update the next action and put into pending status
                 conn.execute("UPDATE jobs SET head_action_type = ?, head_action_class = ?, head_action_status = ?, head_action_id = ?, last_status_change = ?, workflow_stage = ? WHERE job_id = ?",
@@ -320,7 +321,7 @@ class JobData:
         head_action_updates = [] #(job_id, head_action_id, head_action_status)                
         #Initiate pending actions
         for action_class, action, job_id in pending_actions:
-            print(f"Setting up new {action_class.name} for {job_id}:", action)
+            wfmanLog(f"Setting up new {action_class.name} for {job_id}:", action)
             aman = self.action_man[action_class]
             action_id = aman.startAction(action, job_id)
             action_status, _ = aman.queryStatus(action_id)
@@ -351,8 +352,7 @@ class JobData:
                     toschedule = conn.execute("SELECT job_id FROM jobs WHERE head_action_status = ? ORDER BY job_id ASC LIMIT ?", (ActionStatus.PENDING.name, rem)).fetchall()                   
                     job_ids = [ j[0] for j in toschedule ]
                     if len(job_ids) > 0:
-                        print("Number of active workflows",count,"want to activate",rem,"more")
-                        print("Activating",len(job_ids),"workflows with job ids", job_ids)
+                        wfmanLog("Number of active workflows",count,"want to activate",rem,"more.\nActivating",len(job_ids),"workflows with job ids", job_ids)
                     
         self.progressWorkflows(("VALID_IN",job_ids))
                         
@@ -384,7 +384,7 @@ class JobData:
             if action_status != ActionStatus.ACTIVE:
                 updates[job_id] = action_status
             if job_id in updates:
-                print(f"Progressed job {job_id} action {t['head_action_type']} of class {action_class.name} to {updates[job_id].name}")
+                wfmanLog(f"Progressed job {job_id} action {t['head_action_type']} of class {action_class.name} to {updates[job_id].name}")
                 
         #Update head action state
         if len(updates) > 0:

@@ -88,14 +88,28 @@ chat_tab = dbc.Container(
 job_tab = dbc.Container(
     [
         dag.AgGrid(
-            id="transfer_monitor",
+            id="transfer-monitor",
             columnDefs=[
                 {"field": "ID"},
                 {"field": "origin"},
                 {"field": "destination"},
                 {"field": "status"},
             ],
+        ),
+
+        dcc.Textarea(
+            id='wfman-log',
+            style={'width': '100%', 'height': 300},
+            disabled=True,
+            readOnly=True
+        ),
+        dcc.Textarea(
+            id='wfapi-log',
+            style={'width': '100%', 'height': 300},
+            disabled=True,
+            readOnly=True
         )
+
     ],
     fluid=True,
     className="py-3",
@@ -219,7 +233,6 @@ def start_agent(n_clicks, state_file, option_values, wfman_config):
 def receiveAgentResponse(server_message, messages):
     if server_message and (j := json.loads(server_message['data']))['task'] == 'agent_output':
         agent_message = j['content']        
-        print("RECEIVED AGENT RESPONSE", agent_message)
         return messages + [ { "role" : "assistant", "content" : agent_message } ]
     raise PreventUpdate
 
@@ -232,9 +245,24 @@ def receiveAgentResponse(server_message, messages):
 )
 def handleUserInput(new_message, messages):
     if new_message == None:
-        raise PreventUpdate
-    
-    print("USER MESSAGE",new_message)    
+        raise PreventUpdate    
     return messages + [ new_message ], json.dumps({ "task" : "user_response", "content" : new_message['content']})
 
+@callback( Output("wfman-log", "value"),
+           Input("ws", "message"),
+           State("wfman-log", "value")
+          )
+def receiveWfmanLogOutput(server_message, log):
+    if server_message and (j := json.loads(server_message['data']))['task'] == 'wfman_log':
+        return (log if log else "") + j['content']
+    raise PreventUpdate
+
+@callback( Output("wfapi-log", "value"),
+           Input("ws", "message"),
+           State("wfapi-log", "value")
+          )
+def receiveWfapiLogOutput(server_message, log):
+    if server_message and (j := json.loads(server_message['data']))['task'] == 'wfapi_log':
+        return (log if log else "") + j['content']
+    raise PreventUpdate
 
