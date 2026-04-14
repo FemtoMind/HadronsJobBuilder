@@ -98,7 +98,8 @@ Your output must be in JSON format and adhere to the following schema:
         
         resp = agent.invoke({ "messages": user_interactions },     {"configurable": {"thread_id": "1"}})
         obj = resp["structured_response"]
-
+        user_interactions = resp['messages']
+        
         output = f"Obtained {len(obj.actions)} action instances\n" + prettyPrintPydantic(obj.actions)
         Print(output)
         

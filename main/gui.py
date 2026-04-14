@@ -61,15 +61,14 @@ def workflow(config : dict):
         print("STARTING WORKFLOW MANAGER IF REQUIRED")
         
         if config["use_workflow_manager"]:
-            #For now we just use Perlmutter and an 8^4 configuration with 1 rank for simplicity
+            #For now we just use Perlmutter with 1 rank for simplicity
             mpi = (1,1,1,1)
-            grid= (8,8,8,8)
             machine = "Perlmutter"
             agentPrint("Submitting job to workflow manager...")            
-            enqueueStandardHadronsWorkflow(state, jman, mpi, grid, machine, "test_group", "amsc013_g", "debug", "300")
+            enqueueStandardHadronsWorkflow(state, jman, mpi, machine, "test_group", "amsc013_g", "debug", "300")
 
     if config["use_agent"]:
-        agentPrint("Agent interaction has finished, goodbye")            
+        agentPrint(f"Agent interaction has finished. Final state information has been stored in {config['state_file']}. Goodbye")            
 
             
     if jman:

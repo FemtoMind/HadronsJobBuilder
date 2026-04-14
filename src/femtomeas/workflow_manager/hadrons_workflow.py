@@ -5,10 +5,11 @@ from . import globals
 from .logging import wfmanLog
 
 def enqueueStandardHadronsWorkflow(state : State, jman : JobManager,
-                            mpi : Tuple[int,int,int,int], grid : Tuple[int,int,int,int],
+                            mpi : Tuple[int,int,int,int],
                             machine : str, group_name : str,
                             account: str, queue : str, time : str):
     configs, source_uuid = state.gauge.getJobConfigurationsAndSource()
+    grid = state.gauge.getGrid()
     
     if machine not in globals.remote_workdir:
         raise Exception(f"Unknown machine {machine}")

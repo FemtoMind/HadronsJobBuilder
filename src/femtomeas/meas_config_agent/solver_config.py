@@ -103,9 +103,9 @@ Your output must be in JSON format and adhere to the following schema:
     obj = None
     while(accepted == False):    
         resp = agent.invoke({ "messages": user_interactions })
-        #print(resp)
         obj = resp["structured_response"]        
-
+        user_interactions = resp['messages']
+        
         #Auto validation
         valid = True
         invalid_why = "Your previous response was invalid for the following reason(s):"

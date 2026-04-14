@@ -102,11 +102,10 @@ if __name__ == "__main__":
         jman.start()
         
         if not args.skip_agent:
-            #For now we just use Perlmutter and an 8^4 configuration with 1 rank for simplicity
+            #For now we just use Perlmutter with 1 rank for simplicity
             mpi = (1,1,1,1)
-            grid= (8,8,8,8)
             machine = "Perlmutter"
-            enqueueStandardHadronsWorkflow(state, jman, mpi, grid, machine, "test_group", "amsc013_g", "debug", "300")
+            enqueueStandardHadronsWorkflow(state, jman, mpi, machine, "test_group", "amsc013_g", "debug", "300")
 
         
         jman.stop() #will wait until the job queue is complete
