@@ -49,6 +49,9 @@ def uploadBytes(machine: str, remote_path: str, content: io.BytesIO, allow_unsaf
     wfapiLog(f"Uploading binary data to {machine}:{remote_path}")
     return True
 
+def queryMachineStatus(machine: str, rtype="compute")-> bool:
+    return True
+
 jid=0
 compute_jobs = { }
 

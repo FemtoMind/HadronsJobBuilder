@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 import pickle
 import sqlite3
+import tempfile
+import os
 from pathlib import Path
 from typing import List, Tuple
 from femtomeas.meas_config_agent.hadrons_xml import HadronsXML
@@ -117,13 +119,13 @@ class HadronsComputeAction(ComputeActionBase):
     mpi : Tuple[int, int, int, int]
    
     def initiateAction(self, job_id)->str:
-        xml_file = f"/tmp/hadrons_xml.{job_id}"
+        _, xml_file = tempfile.mkstemp(prefix="hadrons_xml_", text=True, dir="/tmp", suffix=".xml")
         self.spec.writeXML(xml_file)
         assert self.machine in globals.remote_workdir
         
         rundir = replaceJobIdSubstring(self.spec.job_rundir, job_id)
         wfmanLog(f"Job {job_id} machine {self.machine} rundir {rundir}")
-        return submitHadronsJob(self.machine, xml_file, rundir, self.account, self.queue, self.time, self.spec.grid, self.mpi)
+        return submitHadronsJob(self.machine, xml_file, rundir, self.account, self.queue, self.time, self.spec.grid, self.mpi, delete_xml_after_upload = True)
 
 class ActionClass(Enum):
     NONE = 0

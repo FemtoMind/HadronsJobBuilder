@@ -305,7 +305,6 @@ def addOrUpdateTransferEntry(server_message):
     prevent_initial_call=True,
 )
 def resizeTransferTableAfterGridUpdates(_):
-    print("VIRTUALROWDATA TRANSFER CALLBACK")
     return "autoSize"
 
 
@@ -332,6 +331,5 @@ def addOrUpdateComputeEntry(server_message):
     prevent_initial_call=True,
 )
 def resizeComputeTableAfterGridUpdates(_):
-    print("VIRTUALROWDATA COMPUTE CALLBACK")
     return "autoSize"
 

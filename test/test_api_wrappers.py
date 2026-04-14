@@ -5,7 +5,7 @@ import time
 import stat
 import os
 import json
-from femtomeas.workflow_manager.manager_config import readManagerConfig
+from femtomeas.workflow_manager.manager_config import readManagerConfigFile
 import sys
 
 def hadronsXMLexample(output_file):
@@ -126,7 +126,7 @@ def hadronsXMLexample(output_file):
 if len(sys.argv) == 1:
     raise Exception("Must provide the manager configuration JSON")
 
-readManagerConfig(sys.argv[1])
+readManagerConfigFile(sys.argv[1])
 
 machine = "Perlmutter"
 safe_dir = globals.remote_workdir[machine]
