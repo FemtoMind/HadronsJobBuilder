@@ -175,12 +175,10 @@ Your output must be in JSON format and adhere to the following schema:
     
     agent = create_agent(model=model, tools=[getUserInput,provideInformationToUser], system_prompt=sys, response_format=EigenSolversConfig)
 
-    messages = user_interactions.copy()
-    
     accepted = False
     obj = None
     while(accepted == False):    
-        resp = agent.invoke({ "messages": messages })
+        resp = agent.invoke({ "messages": user_interactions })
         obj = resp["structured_response"]        
 
         #Auto validation
@@ -199,7 +197,7 @@ Your output must be in JSON format and adhere to the following schema:
                 invalid_why += f"\n-Eigensolver '{r.name}' failed validation for reason: {rs}"
                                 
         if not valid:
-            messages.append(HumanMessage(invalid_why))
+            user_interactions.append(HumanMessage(invalid_why))
             continue       
         
         #Human validation
@@ -209,6 +207,6 @@ Your output must be in JSON format and adhere to the following schema:
         accepted = queryYesNo("Is this correct?")
         if(accepted == False):
             reason = Input("Explain what is wrong: ")
-            messages.append(HumanMessage(f"Your previous response was not accepted for the following reason: {reason}"))
+            user_interactions.append(HumanMessage(f"Your previous response was not accepted for the following reason: {reason}"))
             
     return obj

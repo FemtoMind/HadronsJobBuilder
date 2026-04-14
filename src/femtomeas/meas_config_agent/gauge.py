@@ -143,14 +143,14 @@ Your output must be in JSON format and adhere to the following schema:
     while(accepted == False):    
         resp = agent.invoke({ "messages": user_interactions },     {"configurable": {"thread_id": "1"}})
         obj = resp["structured_response"]        
-        
-        Print("Obtained gauge field parameters:", obj.config)
+
+        output = f"Obtained gauge field parameters\n" + prettyPrintPydantic(obj.config)
+        Print(output)
 
         accepted = queryYesNo("Is this correct?")
         if(accepted == False):
             reason = Input("Explain what is wrong: ")
             user_interactions.append(HumanMessage(f"Your previous response was not accepted for the following reason: {reason}"))
-    print("CONFIGURATION AGENT DONE")
     return obj
 
 
