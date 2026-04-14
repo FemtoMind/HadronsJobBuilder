@@ -90,7 +90,8 @@ job_tab = dbc.Container(
         dag.AgGrid(
             id="transfer-monitor",
             columnDefs=[
-                {"field": "ID"},
+                {"field": "job ID"},
+                {"field": "api ID"},
                 {"field": "origin"},
                 {"field": "destination"},
                 {"field": "status"},
@@ -98,7 +99,19 @@ job_tab = dbc.Container(
             getRowId="params.data.ID",
             columnSize="autoSize"
         ),
-
+        dag.AgGrid(
+            id="compute-monitor",
+            columnDefs=[
+                {"field": "job ID"},
+                {"field": "api ID"},
+                {"field": "machine"},
+                {"field": "queue"},
+                {"field": "time"},
+                {"field": "status"},
+            ],
+            getRowId="params.data.ID",
+            columnSize="autoSize"
+        ),
         dcc.Textarea(
             id='wfman-log',
             style={'width': '100%', 'height': 300},
@@ -279,8 +292,7 @@ def addOrUpdateTransferEntry(server_message):
         print("TRANSFER INSTRUCTION",j)
         content = json.loads(j['content'])
         
-        #row_id = content['api_key']  row_id, "ID" : row_id
-        row = { "ID" : content['api_key'], "origin" : content['origin'], "destination" : content['destination'], "status" : content['api_status'] }
+        row = { "job ID" : content['job_id'], "api ID" : content['api_key'], "origin" : content['origin'], "destination" : content['destination'], "status" : content['api_status'] }
         cmd = 'add' if j['task'] == 'add_transfer' else 'update'
         print("TRANSFER CMD",cmd,"UPDATED ROW",row)
         
@@ -292,7 +304,34 @@ def addOrUpdateTransferEntry(server_message):
     Input("transfer-monitor", "rowTransaction"),
     prevent_initial_call=True,
 )
-def resizeTranferTableAfterGridUpdates(_):
+def resizeTransferTableAfterGridUpdates(_):
     print("VIRTUALROWDATA TRANSFER CALLBACK")
+    return "autoSize"
+
+
+
+
+@callback( Output("compute-monitor", "rowTransaction"),
+           Input("ws", "message")
+          )
+def addOrUpdateComputeEntry(server_message):
+    if server_message and (j := json.loads(server_message['data']) )['task'] in ('add_compute', 'update_compute'):
+        print("COMPUTE INSTRUCTION",j)
+        content = json.loads(j['content'])
+        
+        row = { "job ID" : content['job_id'], "api ID" : content['api_key'], "machine" : content['machine'], "queue" : content['queue'], "time" : content['time'], "status" : content['api_status'] }
+        cmd = 'add' if j['task'] == 'add_compute' else 'update'
+        print("COMPUTE CMD",cmd,"UPDATED ROW",row)
+        
+        return { cmd : [ row ] }
+    raise PreventUpdate
+
+@callback(
+    Output("compute-monitor", "columnSize"),
+    Input("compute-monitor", "rowTransaction"),
+    prevent_initial_call=True,
+)
+def resizeComputeTableAfterGridUpdates(_):
+    print("VIRTUALROWDATA COMPUTE CALLBACK")
     return "autoSize"
 

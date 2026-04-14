@@ -48,7 +48,11 @@ def workflow(config : dict):
             compute_status = jd.getActiveActions(ActionClass.COMPUTE)
             for t in transfer_status:
                 sendToFrontend('add_transfer', json.dumps(t))
-            
+            for c in compute_status:
+                sendToFrontend('add_compute', json.dumps(t))
+
+
+                
     if config["use_agent"]:
         query = "" if config["reload_state"] else agentQuery("Describe the observables you wish to compute")
         state = agent(query, llm, ckpoint_file=config["state_file"], reload_state=config["reload_state"])

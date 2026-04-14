@@ -233,10 +233,11 @@ class ActionManager:
         """
         out = []
         with self.conn as conn:
-            entries = conn.execute(f"SELECT api_key, api_status, details FROM {self.table_name} WHERE action_status = ?", (ActionStatus.ACTIVE.name,) ).fetchall()
+            entries = conn.execute(f"SELECT job_id, api_key, api_status, details FROM {self.table_name} WHERE action_status = ?", (ActionStatus.ACTIVE.name,) ).fetchall()
             for entry in entries:
                 action = _unser(entry['details'])
                 dc = action.getInfo()
+                dc['job_id'] = entry['job_id']
                 dc['api_key'] = entry['api_key']
                 dc['api_status'] = entry['api_status']
                 out.append(dc)
@@ -247,9 +248,10 @@ class ActionManager:
         For the given action, return a dictionary containing "api_key", "api_status" and other custom fields defined on a per-action basis
         """        
         with self.conn as conn:
-            entry = conn.execute(f"SELECT details, api_status, api_key FROM {self.table_name} WHERE action_id = ?", (action_id,) ).fetchone()
+            entry = conn.execute(f"SELECT job_id, details, api_status, api_key FROM {self.table_name} WHERE action_id = ?", (action_id,) ).fetchone()
             action = _unser(entry['details'])
             dc = action.getInfo()
+            dc['job_id'] = entry['job_id']
             dc['api_key'] = entry['api_key']
             dc['api_status'] = entry['api_status']
             return dc
@@ -384,7 +386,9 @@ class JobData:
             info = self.action_man[action_class].getActionInfo(action_id)
             if action_class == ActionClass.TRANSFER:
                 updateGUI('update_transfer', json.dumps(info))
-            
+            elif action_class == ActionClass.COMPUTE:
+                updateGUI('update_compute', json.dumps(info))
+
         #Initiate the required actions
         head_action_updates = [] #(job_id, head_action_id, head_action_status, head_action_class)
 
@@ -410,6 +414,8 @@ class JobData:
             info = self.action_man[action_class].getActionInfo(action_id)
             if action_class == ActionClass.TRANSFER:
                 updateGUI('add_transfer', json.dumps(info))
+            elif action_class == ActionClass.COMPUTE:
+                updateGUI('add_compute', json.dumps(info))
 
                 
 
