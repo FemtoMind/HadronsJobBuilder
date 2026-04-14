@@ -87,44 +87,82 @@ chat_tab = dbc.Container(
 
 job_tab = dbc.Container(
     [
-        dag.AgGrid(
-            id="transfer-monitor",
-            columnDefs=[
-                {"field": "job ID"},
-                {"field": "api ID"},
-                {"field": "origin"},
-                {"field": "destination"},
-                {"field": "status"},
+        # Row 1: Tables
+        dbc.Row(
+            [                
+                dbc.Col([
+                    html.H5("Transfer Monitor", className="mb-2"),
+                    dag.AgGrid(
+                        id="transfer-monitor",
+                        columnDefs=[
+                            {"field": "job ID"},
+                            {"field": "api ID"},
+                            {"field": "origin"},
+                            {"field": "destination"},
+                            {"field": "status"},
+                        ],
+                        defaultColDef={
+                            "wrapText": True,
+                            "autoHeight": True,
+                        },
+                        getRowId="params.data.ID",
+                        columnSize="autoSize",
+                        style={"height": 400, "width": "100%"},
+                    )],
+                    width=6,
+                ),
+                dbc.Col([
+                    html.H5("Compute Monitor", className="mb-2"),
+                    dag.AgGrid(
+                        id="compute-monitor",
+                        columnDefs=[
+                            {"field": "job ID"},
+                            {"field": "api ID"},
+                            {"field": "machine"},
+                            {"field": "queue"},
+                            {"field": "time"},
+                            {"field": "status"},
+                        ],
+                        defaultColDef={
+                            "wrapText": True,
+                            "autoHeight": True,
+                        },
+                        getRowId="params.data.ID",
+                        columnSize="autoSize",
+                        style={"height": 400, "width": "100%"},
+                    )],
+                    width=6,
+                ),
             ],
-            getRowId="params.data.ID",
-            columnSize="autoSize"
+            className="mb-3",
         ),
-        dag.AgGrid(
-            id="compute-monitor",
-            columnDefs=[
-                {"field": "job ID"},
-                {"field": "api ID"},
-                {"field": "machine"},
-                {"field": "queue"},
-                {"field": "time"},
-                {"field": "status"},
-            ],
-            getRowId="params.data.ID",
-            columnSize="autoSize"
-        ),
-        dcc.Textarea(
-            id='wfman-log',
-            style={'width': '100%', 'height': 300},
-            disabled=True,
-            readOnly=True
-        ),
-        dcc.Textarea(
-            id='wfapi-log',
-            style={'width': '100%', 'height': 300},
-            disabled=True,
-            readOnly=True
-        )
 
+        # Row 2: Logs
+        dbc.Row(
+            [
+                dbc.Col([
+                    html.H5("Workflow Manager Logs", className="mb-2"),
+                    dcc.Textarea(
+                        id='wfman-log',
+                        style={'width': '100%', 'height': 300},
+                        disabled=True,
+                        readOnly=True
+                    )],
+                    width=6,
+                ),
+                dbc.Col(
+                    [
+                    html.H5("API Logs", className="mb-2"),
+                    dcc.Textarea(
+                        id='wfapi-log',
+                        style={'width': '100%', 'height': 300},
+                        disabled=True,
+                        readOnly=True
+                    )],
+                    width=6,
+                ),
+            ]
+        ),
     ],
     fluid=True,
     className="py-3",
