@@ -127,5 +127,5 @@ def configureObservables(model, state, user_interactions: list[BaseMessage]) -> 
         accepted = queryYesNo("Is this correct?")
         if(accepted == False):
             reason = Input("Explain what is wrong: ")
-            user_interactions.append(HumanMessage(f"Your previous response was not accepted for the following reason: {reason}"))            
+            user_interactions.append(HumanMessage(f"Your previous response was not accepted for the following reason: {reason}"))
     return obj

@@ -20,6 +20,14 @@ def wfapiLog(*args, **kwargs):
     """
     api_log_func(*args, *kwargs)
 
-
+update_gui_func = None
+    
+def updateGUI(task, content):
+    """
+    Function to send information to the GUI over the websocket
+    Defaults to None
+    """
+    if update_gui_func:
+        update_gui_func(task, content)
 
 

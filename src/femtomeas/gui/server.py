@@ -15,47 +15,46 @@ main_loop = None
 async def capture_loop():
    global main_loop
    main_loop = asyncio.get_running_loop()
+   
+####Send tasks on same queue but with task information attached 
+send_queue = asyncio.Queue()
 
-agent_print_queue = asyncio.Queue()
-
+def sendToFrontend(task: str, content: str):
+   """
+   Send data via the websocket to the frontend
+   task: description of the data
+   content: the data
+   """
+   asyncio.run_coroutine_threadsafe(send_queue.put({"task" : task, "content" : content }), main_loop).result()
+   time.sleep(0.3) #allows successive calls to print to all render correctly (seems to be an inherent limitation in dash that callbacks in quick succession do not work well)
+   
+def printToString(*args, **kwargs):
+   buf = io.StringIO()
+   print(*args, *kwargs, file=buf)
+   return buf.getvalue()
+   
 def agentPrint(*args, **kwargs):
-    buf = io.StringIO()
-    print(*args, *kwargs, file=buf)
-    msg = buf.getvalue()
-    
-    asyncio.run_coroutine_threadsafe(agent_print_queue.put(msg), main_loop).result()
-    time.sleep(0.3) #allows successive calls to print to all render correctly
+   sendToFrontend("agent_output", printToString(*args, *kwargs))
 
+def workflowManagerLogGUI(*args, **kwargs):
+   sendToFrontend("wfman_log", printToString(*args, *kwargs))
+    
+def workflowAPIlogGUI(*args, **kwargs):
+   sendToFrontend("wfapi_log", printToString(*args, *kwargs))
+
+    
+####Receiver tasks on different queues
 agent_recv_user_queue = asyncio.Queue()
     
 def agentQuery(query):
-    asyncio.run_coroutine_threadsafe(agent_print_queue.put(query), main_loop).result()
-    return asyncio.run_coroutine_threadsafe(agent_recv_user_queue.get(), main_loop).result().strip()
-
-wfman_log_queue = asyncio.Queue()
-
-def workflowManagerLogGUI(*args, **kwargs):
-    buf = io.StringIO()
-    print(*args, *kwargs, file=buf)
-    msg = buf.getvalue()
-
-    asyncio.run_coroutine_threadsafe(wfman_log_queue.put(msg), main_loop).result()
-    time.sleep(0.3) #allows successive calls to print to all render correctly
-
-wfapi_log_queue = asyncio.Queue()
-
-def workflowAPIlogGUI(*args, **kwargs):
-    buf = io.StringIO()
-    print(*args, *kwargs, file=buf)
-    msg = buf.getvalue()
-
-    asyncio.run_coroutine_threadsafe(wfapi_log_queue.put(msg), main_loop).result()
-    time.sleep(0.3) #allows successive calls to print to all render correctly
-
-
-    
+    sendToFrontend("agent_output",query)
+    user_response = asyncio.run_coroutine_threadsafe(agent_recv_user_queue.get(), main_loop).result().strip()
+    print("AGENT QUERY FUNCTION DETECTED USER RESPONSE", user_response)
+    return user_response
+   
 server_workflow = None
 
+#Allow overriding server workflow
 def setServerWorkflow(workflow):
     global server_workflow
     server_workflow = workflow
@@ -65,59 +64,44 @@ async def websocket_endpoint(websocket: WebSocket):
     assert server_workflow != None
     
     await websocket.accept()
-    global agent_print_queue, agent_recv_user_queue, wfman_log_queue, wfapi_log_queue
-    agent_print_queue = asyncio.Queue() #reset
+    global agent_recv_user_queue, send_queue
     agent_recv_user_queue = asyncio.Queue()
-    wfman_log_queue = asyncio.Queue()
-    wfapi_log_queue = asyncio.Queue()
+    send_queue = asyncio.Queue()
     
-    #Task that sends agent output to the frontend
-    async def agent_print_sender():
-        while True:
-            msg = await agent_print_queue.get()
-            await websocket.send_json({"task": "agent_output", "content": msg})
+    async def sender():
+       while True:
+          json = await send_queue.get()
+          print("SENDER",json)
+          
+          await websocket.send_json(json)
 
-    #Task that sends worflow manager log output to frontend
-    async def wfman_log_sender():
-        while True:
-            msg = await wfman_log_queue.get()
-            await websocket.send_json({"task": "wfman_log", "content": msg})
-
-    #Task that sends worflow API log output to frontend
-    async def wfapi_log_sender():
-        while True:
-            msg = await wfapi_log_queue.get()
-            await websocket.send_json({"task": "wfapi_log", "content": msg})
-
-            
-    start_event = asyncio.Event()
-
+    #Task that receives input from the frontend and redirects as appropriate
     #Arguments to agent start
     workflow_config = None
-   
-    #Task that receives input from the frontend and redirects as appropriate            
+    start_event = asyncio.Event()
+    
     async def receiver():
         while True:
+            print("RECEIVER TASK WAITING FOR MESSAGE")
             msg = await websocket.receive_json()
+            print("RECEIVER TASK RECEIVED MESSAGE",msg)
             if msg['task'] == 'user_response':
+               print("RECEIVER TASK DETECTED USER RESPONSE", msg['content'])
                await agent_recv_user_queue.put(msg['content'])
             elif msg['task'] == 'start':
                nonlocal workflow_config
                workflow_config = json.loads(msg['content'])
                start_event.set()
-               
+         
+
     try:
-        agent_print_task = asyncio.create_task(agent_print_sender())
-        wfman_log_task = asyncio.create_task(wfman_log_sender())
-        wfapi_log_task = asyncio.create_task(wfapi_log_sender())
+        sender_task = asyncio.create_task(sender())
         receiver_task = asyncio.create_task(receiver())
 
         await start_event.wait()
         await main_loop.run_in_executor(None, server_workflow, workflow_config)
         
-        agent_print_task.cancel()
-        wfman_log_task.cancel()
-        wfapi_log_task.cancel()
+        sender_task.cancel()
         receiver_task.cancel()
         
         while True:

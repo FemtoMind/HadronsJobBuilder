@@ -6,11 +6,12 @@ from typing import List, Tuple
 from femtomeas.meas_config_agent.hadrons_xml import HadronsXML
 import time
 import threading
+import json
 
 from .api_general import *
 from .hadrons import submitHadronsJob
 from . import globals
-from .logging import wfmanLog
+from .logging import wfmanLog, updateGUI
 
 from enum import Enum
 import re
@@ -44,7 +45,11 @@ class HadronsJobSpec:
         
 @dataclass
 class TransferActionBase:
-    pass
+    def getInfo(self)->dict:
+        """
+        Return the transfer information in a common dictionary format with entries {"origin", "destination"}
+        """
+        raise NotImplementedError("Derived class must implement getTransferInfo")
 
 @dataclass
 class TransferToAction(TransferActionBase):
@@ -60,6 +65,13 @@ class TransferToAction(TransferActionBase):
         dest_path = replaceJobIdSubstring(self.dest_path, job_id)
         
         return globusCopyToMachine(self.machine, dest_path, self.source_endpoint, source_path)
+
+    def getInfo(self)->dict:
+        """
+        Return the transfer information in a common dictionary format with entries {"origin", "destination"}
+        """
+        return { "origin" : f"{self.source_endpoint}:{self.source_path}",  "destination" : f"{self.machine}:{self.dest_path}" }
+
     
 @dataclass
 class TransferFromAction(TransferActionBase):
@@ -75,6 +87,15 @@ class TransferFromAction(TransferActionBase):
         dest_path = replaceJobIdSubstring(self.dest_path, job_id)
         
         return globusCopyFromMachine(self.dest_endpoint, dest_path, self.machine, source_path)
+
+    def getInfo(self)->dict:
+        """
+        Return the transfer information in a common dictionary format with entries {"origin", "destination"}
+        """
+        return { "origin" : f"{self.machine}:{self.source_path}", "destination" : f"{self.dest_endpoint}:{self.dest_path}" }
+
+
+    
     
 @dataclass
 class ComputeActionBase:
@@ -82,6 +103,13 @@ class ComputeActionBase:
     account : str
     queue : str
     time : str
+
+    def getInfo(self)->dict:
+        """
+        Return the transfer information in a common dictionary format with entries {"machine", "queue", "time"}
+        """
+        return {"machine" : self.machine, "queue" : self.queue, "time" : self.time}
+
     
 @dataclass
 class HadronsComputeAction(ComputeActionBase):
@@ -199,6 +227,34 @@ class ActionManager:
             time.sleep(check_freq)
         return action_status
 
+    def getActiveActions(self):
+        """
+        Get all active actions and returning a list of dictionaries, each containing "api_key", "api_status" and other custom fields defined on a per-action basis
+        """
+        out = []
+        with self.conn as conn:
+            entries = conn.execute(f"SELECT api_key, api_status, details FROM {self.table_name} WHERE action_status = ?", (ActionStatus.ACTIVE.name,) ).fetchall()
+            for entry in entries:
+                action = _unser(entry['details'])
+                dc = action.getInfo()
+                dc['api_key'] = entry['api_key']
+                dc['api_status'] = entry['api_status']
+                out.append(dc)
+        return out
+
+    def getActionInfo(self, action_id)->dict:
+        """
+        For the given action, return a dictionary containing "api_key", "api_status" and other custom fields defined on a per-action basis
+        """        
+        with self.conn as conn:
+            entry = conn.execute(f"SELECT details, api_status, api_key FROM {self.table_name} WHERE action_id = ?", (action_id,) ).fetchone()
+            action = _unser(entry['details'])
+            dc = action.getInfo()
+            dc['api_key'] = entry['api_key']
+            dc['api_status'] = entry['api_status']
+            return dc
+            
+    
 class DataTransfers(ActionManager):
     def __init__(self, connection : sqlite3.Connection):
         #"ACTIVE"  The task is in progress.
@@ -280,25 +336,30 @@ class JobData:
            ("VALID_IN", [job_id1, job_id2, ...]) - Progress valid workflows (those whose head action status is either ActionStatus.PENDING or ActionStatus.COMPLETED, not in a failure state) based on a list of job indices.
         """
 
-        pending_actions = []
+        pending_actions = []        
+        completed_actions = [] #list of action ids of completed actions
         
         with self.conn as conn:
             if condition[0] == "COMPLETE" and condition[1] == None:
-                progress_actions = conn.execute("SELECT job_id, workflow, workflow_stage, head_action_type, head_action_status FROM jobs WHERE head_action_class != ? AND head_action_status = ?",
+                progress_actions = conn.execute("SELECT job_id, workflow, workflow_stage, head_action_type, head_action_status, head_action_id, head_action_class FROM jobs WHERE head_action_class != ? AND head_action_status = ?",
                                                 (ActionClass.NONE.name,ActionStatus.COMPLETED.name)).fetchall()
             elif condition[0] == "VALID_IN" and isinstance(condition[1],list):
                 placeholders = ",".join("?" for _ in condition[1])
-                progress_actions = conn.execute(f"SELECT job_id, workflow, workflow_stage, head_action_type, head_action_status FROM jobs WHERE head_action_class != ? AND job_id IN ({placeholders}) AND head_action_status IN (?,?)",
+                progress_actions = conn.execute(f"SELECT job_id, workflow, workflow_stage, head_action_type, head_action_status, head_action_id, head_action_class FROM jobs WHERE head_action_class != ? AND job_id IN ({placeholders}) AND head_action_status IN (?,?)",
                                                 ( ActionClass.NONE.name, *condition[1], ActionStatus.PENDING.name, ActionStatus.COMPLETED.name )
                                                 )
             else:
-                raise Exception("Unknown condition")
+                raise Exception("Unknown condition" + str(condition))
                 
-            for a in progress_actions:
+            for a in progress_actions:              
                 #Get information on the next workflow task
                 workflow = _unser(a['workflow'])
                 workflow_stage = a['workflow_stage']
-               
+
+                #Record completed actions so we can update any monitors
+                if a['head_action_status'] == ActionStatus.COMPLETED.name:
+                    completed_actions.append(  (a['head_action_id'], getattr(ActionClass, a['head_action_class'], None) ) )
+                
                 job_id = a['job_id']
                 next_workflow_stage = workflow_stage+1
 
@@ -317,26 +378,40 @@ class JobData:
                 if next_action_status == ActionStatus.PENDING:
                     pending_actions.append( (next_action_class, next_action, job_id ) )
 
+
+        #Inform GUI regarding completed actions (requires database activity)
+        for action_id, action_class in completed_actions:
+            info = self.action_man[action_class].getActionInfo(action_id)
+            if action_class == ActionClass.TRANSFER:
+                updateGUI('update_transfer', json.dumps(info))
+            
         #Initiate the required actions
-        head_action_updates = [] #(job_id, head_action_id, head_action_status)                
-        #Initiate pending actions
+        head_action_updates = [] #(job_id, head_action_id, head_action_status, head_action_class)
+
         for action_class, action, job_id in pending_actions:
             wfmanLog(f"Initiating action of type {action_class.name} for {job_id}")
             aman = self.action_man[action_class]
             action_id = aman.startAction(action, job_id)
             action_status, _ = aman.queryStatus(action_id)
-            head_action_updates.append( (job_id, action_id, action_status) )
+            head_action_updates.append( (job_id, action_id, action_status, action_class) )
             
         ####WARNING: If the manager is killed here we can think the action is pending but it is already underway. The action DBs will know about it but not the main DB. How to fix?
         #Maybe instead of PENDING we have some other marker, e.g. SCHEDULING. Then if we come across an entry with this status we will know to check the action DB to see if it was actually scheduled
         
         #Update job state DB
         with self.conn as conn:
-            for job_id, action_id, status in head_action_updates:
+            for job_id, action_id, status, _ in head_action_updates:
                 conn.execute("UPDATE jobs SET head_action_status = ?, head_action_id = ?, last_status_change = ? WHERE job_id = ?",
                              (status.name, action_id, int(time.time()), job_id )
                              )
- 
+
+        #Inform GUI regarding new actions (requires database activity)
+        for _, action_id, _, action_class in head_action_updates:
+            info = self.action_man[action_class].getActionInfo(action_id)
+            if action_class == ActionClass.TRANSFER:
+                updateGUI('add_transfer', json.dumps(info))
+
+                
 
 
     def startWorkflows(self, job_ids : list | None = None):
@@ -353,8 +428,9 @@ class JobData:
                     job_ids = [ j[0] for j in toschedule ]
                     if len(job_ids) > 0:
                         wfmanLog("Number of active workflows",count,"want to activate",rem,"more.\nActivating",len(job_ids),"workflows with job ids", job_ids)
-                    
-        self.progressWorkflows(("VALID_IN",job_ids))
+
+        if job_ids:
+            self.progressWorkflows(("VALID_IN",job_ids))
                         
 
 
@@ -413,7 +489,14 @@ class JobData:
             else:
                 raise Exception("Unexpected type for 'statuses'", type(statuses))
 
-        
+    def getActiveActions(self, action_class : ActionClass)->dict:
+        """
+        Get all active actions and returning a list of dictionaries, each containing "api_key", "api_status" and other custom fields defined on a per-action basis
+        """
+        return self.action_man[action_class].getActiveActions()
+
+
+            
 class JobManager:
     def __init__(self, filename: str | None = None, poll_freq=30, max_workflows_active=10):
         """
@@ -426,7 +509,10 @@ class JobManager:
         self._thread = None
         self._lock = threading.Lock()
         self.poll_freq = poll_freq
-    
+
+    def isAlive(self):
+        return self._thread is not None and self._thread.is_alive()
+        
     def start(self):
         if self._thread is not None and self._thread.is_alive():
             return

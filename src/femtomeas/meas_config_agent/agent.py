@@ -105,6 +105,10 @@ def agent(query, model, ckpoint_file="state.json", reload_state=False)-> State :
 ---
         """)
         state.gauge = identifyGaugeConfigs(model, messages)
+        print("CHECKPOINTING STATE")
         checkpointState(state,ckpoint_file)
+        print("CHECKPOINTING STATE COMPLETE")
 
+
+    print("MEASUREMENT AGENT COMPLETE")
     return state

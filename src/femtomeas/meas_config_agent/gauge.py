@@ -43,7 +43,7 @@ class LoadGauge(BaseModel):
         if override_path != None:
             stub = os.path.join(override_path,  os.path.basename(self.stub) )
         ckpoint_idx = self.start + job_index * self.step
-        if ckpoint_idx > end:
+        if ckpoint_idx > self.end:
             raise Exception("Configuration index is out of range")           
         
         opt = xml.addModule("gauge","MIO::LoadNersc")
@@ -55,7 +55,7 @@ class LoadGauge(BaseModel):
         """
         Return a list of configuration filenames required for the job and the source endpoint ID. If no actual file is required return a suitable sized list of None for the first argument. If the files are local or no files are required, return None for the second argument.
         """
-        return [ stub + f".{i}" for i in range(start, end+step, step) ], self.source_uuid
+        return [ self.stub + f".{i}" for i in range(self.start, self.end+self.step, self.step) ], self.source_uuid
 
         
 class UnitGauge(BaseModel):
@@ -149,7 +149,8 @@ Your output must be in JSON format and adhere to the following schema:
         accepted = queryYesNo("Is this correct?")
         if(accepted == False):
             reason = Input("Explain what is wrong: ")
-            user_interactions.append(HumanMessage(f"Your previous response was not accepted for the following reason: {reason}"))            
+            user_interactions.append(HumanMessage(f"Your previous response was not accepted for the following reason: {reason}"))
+    print("CONFIGURATION AGENT DONE")
     return obj
 
 

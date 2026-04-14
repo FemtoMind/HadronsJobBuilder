@@ -95,6 +95,8 @@ job_tab = dbc.Container(
                 {"field": "destination"},
                 {"field": "status"},
             ],
+            getRowId="params.data.ID",
+            columnSize="autoSize"
         ),
 
         dcc.Textarea(
@@ -245,8 +247,10 @@ def receiveAgentResponse(server_message, messages):
 )
 def handleUserInput(new_message, messages):
     if new_message == None:
-        raise PreventUpdate    
-    return messages + [ new_message ], json.dumps({ "task" : "user_response", "content" : new_message['content']})
+        raise PreventUpdate
+    print("CHAT COMPONENT DETECTED USER RESPONSE", new_message['content'])
+    
+    return messages + [ new_message ], json.dumps({ "task" : "user_response", "content" : new_message['content'], "nonce": time.time_ns()  })  #use a timestamp to ensure each message is unique. This prevents the stupid socket library from dropping responses with the same content
 
 @callback( Output("wfman-log", "value"),
            Input("ws", "message"),
@@ -265,4 +269,30 @@ def receiveWfapiLogOutput(server_message, log):
     if server_message and (j := json.loads(server_message['data']))['task'] == 'wfapi_log':
         return (log if log else "") + j['content']
     raise PreventUpdate
+
+
+@callback( Output("transfer-monitor", "rowTransaction"),
+           Input("ws", "message")
+          )
+def addOrUpdateTransferEntry(server_message):
+    if server_message and (j := json.loads(server_message['data']) )['task'] in ('add_transfer', 'update_transfer'):
+        print("TRANSFER INSTRUCTION",j)
+        content = json.loads(j['content'])
+        
+        #row_id = content['api_key']  row_id, "ID" : row_id
+        row = { "ID" : content['api_key'], "origin" : content['origin'], "destination" : content['destination'], "status" : content['api_status'] }
+        cmd = 'add' if j['task'] == 'add_transfer' else 'update'
+        print("TRANSFER CMD",cmd,"UPDATED ROW",row)
+        
+        return { cmd : [ row ] }
+    raise PreventUpdate
+
+@callback(
+    Output("transfer-monitor", "columnSize"),
+    Input("transfer-monitor", "rowTransaction"),
+    prevent_initial_call=True,
+)
+def resizeTranferTableAfterGridUpdates(_):
+    print("VIRTUALROWDATA TRANSFER CALLBACK")
+    return "autoSize"
 
