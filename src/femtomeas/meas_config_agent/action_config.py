@@ -94,7 +94,7 @@ Your output must be in JSON format and adhere to the following schema:
     accepted = False
     obj = None
     while(accepted == False):
-        agent = create_agent(model=model, tools=[getUserInput,provideInformationToUser,addDWFaction,addWilsonCloverAction], system_prompt=sys, response_format=ActionsConfig)
+        agent = create_agent(model=model, tools=[getUserInput,provideInformationToUser], system_prompt=sys, response_format=ActionsConfig)
         
         resp = agent.invoke({ "messages": user_interactions },     {"configurable": {"thread_id": "1"}})
         obj = resp["structured_response"]
