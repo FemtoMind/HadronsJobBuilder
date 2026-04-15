@@ -9,11 +9,9 @@ import dash_bootstrap_components as dbc
 import json
 from femtomeas.workflow_manager.manager_config import parseManagerConfigStr
 import base64
+from .utils import make_scroll_callback
 
 app_dash = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
-
-#                     )#   , external_stylesheets=[dbc.themes.SLATE]) #mount on / instead
-
 
 startup_controls = dbc.Container(
     [
@@ -95,18 +93,17 @@ job_tab = dbc.Container(
                     dag.AgGrid(
                         id="transfer-monitor",
                         columnDefs=[
-                            {"field": "job ID"},
-                            {"field": "api ID"},
-                            {"field": "origin"},
-                            {"field": "destination"},
-                            {"field": "status"},
-                        ],
+                            {"field": "job ID", "flex" : 1},
+                            {"field": "api ID", "flex" : 1},
+                            {"field": "origin", "flex" : 2},
+                            {"field": "destination", "flex" : 3},
+                            {"field": "status", "flex" : 1},
+                        ],                        
                         defaultColDef={
                             "wrapText": True,
                             "autoHeight": True,
                         },
                         getRowId="params.data.ID",
-                        columnSize="autoSize",
                         style={"height": 400, "width": "100%"},
                     )],
                     width=6,
@@ -116,19 +113,19 @@ job_tab = dbc.Container(
                     dag.AgGrid(
                         id="compute-monitor",
                         columnDefs=[
-                            {"field": "job ID"},
-                            {"field": "api ID"},
-                            {"field": "machine"},
-                            {"field": "queue"},
-                            {"field": "time"},
-                            {"field": "status"},
+                            {"field": "job ID", "flex" : 1},
+                            {"field": "api ID", "flex" : 1},
+                            {"field": "machine", "flex" : 1},
+                            {"field": "queue", "flex" : 1},
+                            {"field": "time", "flex" : 1},
+                            {"field": "status", "flex" : 1},
                         ],
                         defaultColDef={
                             "wrapText": True,
                             "autoHeight": True,
-                        },
+                            },
                         getRowId="params.data.ID",
-                        columnSize="autoSize",
+                        #columnSize="autoSize",
                         style={"height": 400, "width": "100%"},
                     )],
                     width=6,
@@ -349,16 +346,6 @@ def addOrUpdateTransferEntry(server_message):
         return { cmd : [ row ] }
     raise PreventUpdate
 
-@callback(
-    Output("transfer-monitor", "columnSize"),
-    Input("transfer-monitor", "rowTransaction"),
-    prevent_initial_call=True,
-)
-def resizeTransferTableAfterGridUpdates(_):
-    return "autoSize"
-
-
-
 
 @callback( Output("compute-monitor", "rowTransaction"),
            Input("ws", "message")
@@ -374,15 +361,6 @@ def addOrUpdateComputeEntry(server_message):
         
         return { cmd : [ row ] }
     raise PreventUpdate
-
-@callback(
-    Output("compute-monitor", "columnSize"),
-    Input("compute-monitor", "rowTransaction"),
-    prevent_initial_call=True,
-)
-def resizeComputeTableAfterGridUpdates(_):
-    return "autoSize"
-
 
 
 @callback( Output("error-display", "value"),
@@ -400,3 +378,7 @@ def receiveServerError(server_message, log):
         
         return content , {'width': '100%', 'height': height, 'color' : 'red'},   {"display" : "block"}
     raise PreventUpdate
+
+
+make_scroll_callback('wfman-log', app_dash)
+make_scroll_callback('wfapi-log', app_dash)
