@@ -192,7 +192,7 @@ if 0:
     ret = remoteMkdirUnsafe(machine, safe_dir + "/1/2")
     assert ret == 1 or ret == 2
 
-if 1:
+if 0:
     hadronsXMLexample("hadrons_run.xml")
     print("TESTING HADRONS JOB SUBMISSION 1 RANKS, 1 NODE" )
     jobid = submitHadronsJob(machine, "hadrons_run.xml", f"{safe_dir}/test_job", "mp13_g", "debug", "5", (8,8,8,8), (1,1,1,1))
@@ -220,7 +220,7 @@ if 0:
 if 0:
     print(globusTransferStatus(machine, "1234"))
         
-if 0:
+if 1:
     tid = globusCopyToMachine(machine, safe_dir, "dtn", "/global/cfs/cdirs/mp13/ckelly/globus_source_test_dir", block_until_complete=True)
     for i in range(10):
         print(globusTransferStatus(machine, tid))

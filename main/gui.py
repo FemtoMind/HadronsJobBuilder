@@ -6,6 +6,7 @@ from femtomeas.workflow_manager.manager_config import readManagerConfigStr
 from femtomeas.workflow_manager.manager import JobManager, ActionClass
 from femtomeas.workflow_manager.hadrons_workflow import enqueueStandardHadronsWorkflow
 
+import traceback
 import time
 import os
 import json
@@ -30,6 +31,16 @@ amsc_llm_0t = ChatOpenAI(
 )
 
 llm = amsc_llm_0t
+
+#def global_exception_handler(exctype, value, traceback):
+#    print(f"Caught global error: {exctype}:{value}:{traceback}")
+#sys.excepthook = global_exception_handler
+
+def thread_error_handler(args):
+    tb_list = traceback.format_exception(args.exc_type, args.exc_value, args.exc_traceback)
+    sendToFrontend("server_error", json.dumps(tb_list))
+
+threading.excepthook = thread_error_handler
 
 def workflow(config : dict):
     jman = None

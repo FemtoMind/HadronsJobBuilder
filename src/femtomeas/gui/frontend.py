@@ -178,6 +178,18 @@ app_dash.layout = html.Div([
       html.Div(id="job-tab-pane", children=job_tab)    
     ], style={"display": "none"}),
 
+    html.Div(id="error-display-wrapper",
+             children = [
+                 html.H5("Server errors", className="mb-2"),
+                 dcc.Textarea(
+                        id='error-display',
+                        disabled=True,
+                        readOnly=True
+                    )
+                 ],
+             style={"display": "none"}
+             )
+             
 ])
 
 @callback(
@@ -371,3 +383,20 @@ def addOrUpdateComputeEntry(server_message):
 def resizeComputeTableAfterGridUpdates(_):
     return "autoSize"
 
+
+
+@callback( Output("error-display", "value"),
+           Output("error-display", "style"),
+           Output("error-display-wrapper", "style"),
+           Input("ws", "message"),
+           State("error-display", "value")
+          )
+def receiveServerError(server_message, log):
+    if server_message and (j := json.loads(server_message['data']))['task'] == 'server_error':
+        err = json.loads(j['content'])
+        content = (log if log else "") + json.dumps(err,indent=4)
+        lines = content.count("\n") + 1 if content else 1
+        height = max(300, lines * 20)
+        
+        return content , {'width': '100%', 'height': height, 'color' : 'red'},   {"display" : "block"}
+    raise PreventUpdate
