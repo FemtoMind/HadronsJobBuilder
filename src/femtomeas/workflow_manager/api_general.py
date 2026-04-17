@@ -6,7 +6,7 @@ from .logging import wfapiLog
 
 if globals.api_impl == "IRI":
     print("Using IRI API")
-    from .iri_api import setupWorkflowAgent, remoteLs, remoteMkdir, uploadBytes, executeBatchJobCompat, remoteChmod, getJobState, cancelJob, queryMachineStatus, globusTransferStatus, globusCopyToMachine, globusCopyFromMachine
+    from .iri_api import setupWorkflowAgent, remoteLs, remoteMkdir, uploadBytes, executeBatchJobCompat, remoteChmod, getJobState, cancelJob, queryMachineStatus, globusTransferStatus, globusCopyToMachine, globusCopyFromMachine, getUserAccountProjects, getKnownMachines, getMachineQueues
     #from .iri_api import known_machines
 elif globals.api_impl == "SF":
     print("Using Superfacility API")
@@ -14,7 +14,7 @@ elif globals.api_impl == "SF":
     #from .sfapi import known_machines
 elif globals.api_impl == "SPOOF":
     print("Using Spoof API")
-    from .spoof_api import setupWorkflowAgent, remoteMkdir, uploadBytes, executeBatchJobCompat, getJobState, globusTransferStatus, globusCopyToMachine, globusCopyFromMachine, queryMachineStatus
+    from .spoof_api import setupWorkflowAgent, remoteMkdir, uploadBytes, executeBatchJobCompat, getJobState, globusTransferStatus, globusCopyToMachine, globusCopyFromMachine, queryMachineStatus, getUserAccountProjects, getKnownMachines, getMachineQueues
 else:
     raise Exception("Unknown API implementation")
 

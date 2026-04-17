@@ -3,6 +3,7 @@ import time as timemodule
 import io
 from . import globals
 from .logging import wfapiLog
+from typing import Literal, Union, List, Optional, Tuple
 
 def setupWorkflowAgent(sfapi_key_path: str, iriapi_key_path : str, work_dir : dict):
     globals.remote_workdir=work_dir
@@ -51,6 +52,24 @@ def uploadBytes(machine: str, remote_path: str, content: io.BytesIO, allow_unsaf
 
 def queryMachineStatus(machine: str, rtype="compute")-> bool:
     return True
+
+def getKnownMachines():
+    return list(globals.remote_workdir.keys())
+
+def getUserAccountProjects(machine):
+    if machine not in getKnownMachines():
+        raise Exception(f"Invalid machine: {machine}")
+    
+    return ["my_proj1", "my_proj2"]
+
+def getMachineQueues(machine)->List[ Tuple[str,str] ]:
+    """
+    Provide a list of queues and associated information for a given machine
+    
+    Return: a list of string tuples, with the first tuple entry being the queue name and the second relevant information about the queue
+    """
+    return [ ("debug", "max runtime 0.5 hours, max nodes 8"), ("regular", "use for regular production jobs or those that are unsuitable for debug") ]
+
 
 jid=0
 compute_jobs = { }

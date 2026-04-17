@@ -4,7 +4,7 @@ from fastapi.middleware.wsgi import WSGIMiddleware
 import femtomeas.meas_config_agent.common as common
 from femtomeas.workflow_manager.manager_config import readManagerConfigStr
 from femtomeas.workflow_manager.manager import JobManager, ActionClass
-from femtomeas.workflow_manager.hadrons_workflow import enqueueStandardHadronsWorkflow
+from femtomeas.workflow_manager.hadrons_workflow import hadronsSubmissionAgent
 
 import traceback
 import time
@@ -67,16 +67,9 @@ def workflow(config : dict):
     if config["use_agent"]:
         query = "" if config["reload_state"] else agentQuery("Describe the observables you wish to compute")
         state = agent(query, llm, ckpoint_file=config["state_file"], reload_state=config["reload_state"])
-        #state.toHadronsXML().write("hadrons_run.xml")
-
-        print("STARTING WORKFLOW MANAGER IF REQUIRED")
-        
+       
         if config["use_workflow_manager"]:
-            #For now we just use Perlmutter with 1 rank for simplicity
-            mpi = (1,1,1,1)
-            machine = "Perlmutter"
-            agentPrint("Submitting job to workflow manager...")            
-            enqueueStandardHadronsWorkflow(state, jman, mpi, machine, "test_group", "amsc013_g", "debug", "300")
+            hadronsSubmissionAgent(state, jman, llm)
 
     if config["use_agent"]:
         agentPrint(f"Agent interaction has finished. Final state information has been stored in {config['state_file']}. Goodbye")            

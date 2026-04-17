@@ -132,13 +132,20 @@ machine = "Perlmutter"
 safe_dir = globals.remote_workdir[machine]
 print("Machine",machine, "is up?:", queryMachineStatus(machine))
 
+
 if 0:
+    import femtomeas.workflow_manager.iri_api
+    print(femtomeas.workflow_manager.iri_api.getUserAccountProjects(machine))
+    
+
+
+if 1:
     print("TESTING BATCH JOB SUBMISSION")
     jobid = executeBatchJobCompat(machine, '''echo -e '#!/bin/bash\necho "Hello from ${SLURM_PROCID}"' > script.sh
     chmod u+x script.sh
     srun -n 4 ./script.sh
     ''',
-    nodes=1, ranks_per_node=4, gpus_per_rank=1, time="5", queue="debug", account="amsc013_g", job_run_dir=safe_dir, exclusive=False, allow_unsafe=True)
+    nodes=1, ranks_per_node=4, gpus_per_rank=1, time="600", queue="debug", account="amsc013_g", job_run_dir=safe_dir, exclusive=False, allow_unsafe=True)
 
     watchJobStatus(machine, jobid)
 
@@ -220,7 +227,7 @@ if 0:
 if 0:
     print(globusTransferStatus(machine, "1234"))
         
-if 1:
+if 0:
     tid = globusCopyToMachine(machine, safe_dir, "dtn", "/global/cfs/cdirs/mp13/ckelly/globus_source_test_dir", block_until_complete=True)
     for i in range(10):
         print(globusTransferStatus(machine, tid))

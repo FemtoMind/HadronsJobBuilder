@@ -41,7 +41,7 @@ startup_controls = dbc.Container(
                         id="wfman-config-upload",
                         children=dbc.Button(
                             id="wfman-config-upload-button",
-                            children="Choose the workflow manager configuration file (JSON)",
+                            #children="Choose the workflow manager configuration file (JSON)",
                             color="secondary",
                             className="mt-3",
                         ),

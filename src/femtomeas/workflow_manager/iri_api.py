@@ -15,7 +15,12 @@ from globus_sdk.exc import GlobusAPIError
 from .utils import checkSafePath
 from .logging import wfapiLog
 
-known_machines = {  "Perlmutter" : { "iriapi_base" : "https://api.iri.nersc.gov/api/v1", "iriapi_group" : "perlmutter", "sfapi_base" : "https://api.nersc.gov/api/v1.2" } }
+known_machines = {  "Perlmutter" :
+                    { "iriapi_base" : "https://api.iri.nersc.gov/api/v1",
+                      "iriapi_group" : "perlmutter",
+                      "sfapi_base" : "https://api.nersc.gov/api/v1.2",
+                      "queues" : [ ("debug", "max time 0.5 hours, max nodes 8"), ("regular", "use for standard, production jobs or those too large for debug") ]
+                     } }
 tokens = { "iriapi_base" : None, "sfapi_base" : None }  #index tokens by their base path
 
 #Right now we use IRI for everything but the Globus transfers, so we need to use the Superfacility API also
@@ -220,9 +225,35 @@ def getUserProjectIDmap(machine):
         pmap = dict()
         for acct in j:
             pmap[acct['name']] = acct['id']
-        iri_api_project_map[machine] = pmap            
+        iri_api_project_map[machine] = pmap
     
     return iri_api_project_map[machine]
+
+def getKnownMachines():
+    return list(known_machines.keys())
+
+def getMachineQueues(machine)->List[ Tuple[str,str] ]:
+    """
+    Provide a list of queues and associated information for a given machine
+    
+    Return: a list of string tuples, with the first tuple entry being the queue name and the second relevant information about the queue
+    """
+    if machine not in getKnownMachines():
+        raise Exception(f"Invalid machine: {machine}")
+
+    return known_machines[machine]["queues"]
+
+def getUserAccountProjects(machine):
+    if machine not in getKnownMachines():
+        raise Exception(f"Invalid machine: {machine}")
+    
+    out = list(getUserProjectIDmap(machine).keys())
+    if machine == "Perlmutter": #_g is required for GPU nodes
+        for i in out:
+            i += "_g"
+    return out
+    
+
 
 
 iri_api_resource_map = {}
@@ -442,6 +473,8 @@ def executeBatchJobCompat(machine: str, script_body: str,
     Execute batch script on the machine
     script_body: The content of the batch script. If you are executing an existing remote script, use "source /path/to/script"    
     Note that any SLURM/PBS headers will be ignored; ensure that SLURM headers that are usually passed to srun are manually passed instead
+
+    time: the job duration. Currently it seems to only accept integers, which my testing indicates is in *seconds*
     """
 
     wfapiLog(f"Executing batch job on machine {machine} with nodes:{nodes}, ranks/node:{ranks_per_node}, gpus/rank:{gpus_per_rank}, time:{time}, queue:{queue}, account:{account}")
