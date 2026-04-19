@@ -100,3 +100,18 @@ def getJobState(machine: str, jobid: str) -> str:
         status = "active"
     wfapiLog(f"Queried job state {machine}:{jobid}, got {status}")
     return status
+
+def downloadFile(machine: str, remote_path: str)->str:
+    wfapiLog(f"Downloading file {machine}:{remote_path}")
+    return "FAKE CONTENTS"
+
+def remoteRun(machine: str, args : str | List[str] ):
+    cmd = "bash -c \""
+    if isinstance(args, list):
+        for c in args:
+            cmd = cmd + c + ";"
+    else:
+        cmd = cmd + args
+    cmd = cmd + "\""
+
+    wfapiLog(f"Fake executing command {cmd} on machine {machine}")

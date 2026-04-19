@@ -19,6 +19,7 @@ known_machines = {  "Perlmutter" :
                     { "iriapi_base" : "https://api.iri.nersc.gov/api/v1",
                       "iriapi_group" : "perlmutter",
                       "sfapi_base" : "https://api.nersc.gov/api/v1.2",
+                      "sfapi_machine_name" : "perlmutter",
                       "queues" : [ ("debug", "max time 0.5 hours, max nodes 8"), ("regular", "use for standard, production jobs or those too large for debug") ]
                      } }
 tokens = { "iriapi_base" : None, "sfapi_base" : None }  #index tokens by their base path
@@ -249,8 +250,8 @@ def getUserAccountProjects(machine):
     
     out = list(getUserProjectIDmap(machine).keys())
     if machine == "Perlmutter": #_g is required for GPU nodes
-        for i in out:
-            i += "_g"
+        for i in range(len(out)):
+            out[i] += "_g"
     return out
     
 
@@ -463,7 +464,32 @@ def uploadBytes(machine: str, remote_path: str, content: io.BytesIO, allow_unsaf
         return 0
 
 
+def downloadFile(machine: str, remote_path: str)->str:
+    """
+    Download a (small) remote file. Returns the file contents as a string
+    Args:
+       machine - The name of the machine. Valid values are 'Perlmutter'
+       remote_path - The absolute path on the remote machine
+    """
+    wfapiLog(f"Downloading file {machine}:{remote_path}")
+       
+    if not pathlib.Path(remote_path).is_absolute():
+        raise Exception("Path must be absolute")
+    
+    rid = getResourceID(machine, rtype="login")
 
+    j = get(machine, f"filesystem/download/{rid}", params={'path' : remote_path})
+    tid = j['task_id']
+    j = waitTask(machine, tid)
+    
+    if j["status"] == "completed":
+        return j["result"]["output"]
+    else:
+        wfapiLog("Download failed, status:", status, " response:", json.dumps(j,indent=2))
+        return None
+
+
+    
     
 def executeBatchJobCompat(machine: str, script_body: str,
                     nodes : int, ranks_per_node : int, gpus_per_rank : int,
@@ -672,3 +698,28 @@ def globusCopyFromMachine(dest_endpoint: str, dest_path : str,
 
     return _globusCopy(machine_globus_endpoints[machine], dest_endpoint, source_path, dest_path, machine, block_until_complete)
     
+
+def remoteRun(machine: str, args : str | List[str] ):
+    """
+    Run a command on the remote machine login node. Note this does not support returning output
+
+    Note: Currently requires Superfacility API and is restricted to NERSC
+    """
+    cmd = "bash -c \""
+    if isinstance(args, list):
+        for c in args:
+            cmd = cmd + c + ";"
+    else:
+        cmd = cmd + args
+    cmd = cmd + "\""
+
+    if machine not in known_machines:
+        raise Exception("Unknown machine")
+    m = known_machines[machine]["sfapi_machine_name"]
+    
+    wfapiLog(f"Executing command {cmd} on machine {machine}")
+    
+    j, status=post(machine, f"utilities/command/{m}", data={"executable" : cmd}, base='sfapi_base', data_is_json=False)
+
+    if status != 200:
+        raise Exception("Globus transfer failed, response content: " + json.dumps(j))

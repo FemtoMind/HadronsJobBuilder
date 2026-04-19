@@ -139,7 +139,7 @@ if 0:
     
 
 
-if 1:
+if 0:
     print("TESTING BATCH JOB SUBMISSION")
     jobid = executeBatchJobCompat(machine, '''echo -e '#!/bin/bash\necho "Hello from ${SLURM_PROCID}"' > script.sh
     chmod u+x script.sh
@@ -235,3 +235,12 @@ if 0:
 
 if 0:
     globusCopyFromMachine("dtn", "/global/cfs/cdirs/mp13/ckelly/globus_source_test_dir/copyback",  machine, safe_dir + "/test.dat", block_until_complete=True)
+
+if 0:
+    result = downloadFile(machine, "/global/u2/c/ckelly/tocopy")
+    print(result)
+    
+if 1:
+    remoteRun(machine, ["rm -f /global/u2/c/ckelly/test_remote_run", "echo hello >  /global/u2/c/ckelly/test_remote_run"])
+    result = downloadFile(machine, "/global/u2/c/ckelly/test_remote_run")
+    assert "hello" in result
