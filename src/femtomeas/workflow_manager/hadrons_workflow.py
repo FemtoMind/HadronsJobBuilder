@@ -13,21 +13,42 @@ from langchain.messages import (
     AIMessage
 )
 
-from pydantic import BaseModel, Field, ConfigDict, NonNegativeInt, TypeAdapter, PositiveFloat, PositiveInt
-from typing import Literal, Union, List, Optional, Tuple
+from pydantic import BaseModel, Field, ConfigDict, NonNegativeInt, TypeAdapter, PositiveFloat, PositiveInt, create_model
+from typing import Literal, Union, List, Optional, Tuple, Any
 from langchain.agents.structured_output import ToolStrategy, ProviderStrategy
 from langchain.agents import create_agent
+from langchain.agents.middleware import before_model, after_model, AgentState
 import json
 from femtomeas.meas_config_agent.common import getUserInput, provideInformationToUser, queryYesNo, prettyPrintPydantic, Print as AgentPrint, Input as AgentInput
 from femtomeas.workflow_manager.api_general import getKnownMachines, getUserAccountProjects, getMachineQueues
 from langchain.tools import tool
 from .hadrons import defaultRankGeom
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.runtime import Runtime
+
+
+from typing import Callable
+from langchain.agents.middleware import (
+    wrap_model_call,
+    ModelRequest,
+    ModelResponse,
+    AgentState,
+    ExtendedModelResponse
+)
+from langgraph.types import Command
+from typing_extensions import NotRequired
+
 
 def enqueueStandardHadronsWorkflow(state : State, jman : JobManager,
                             mpi : Tuple[int,int,int,int],
                             machine : str, group_name : str,
-                            account: str, queue : str, time : str):
+                            account: str, queue : str, time : str,
+                            stage_out: Tuple[str,str] | None = None
+                            ):
+    """
+    stage_out : If not None, provide a tuple containing the destination Globus endpoint and a path. Files will be placed in subdirectories of that path labeled by the job index
+    """
+    
     configs, source_uuid = state.gauge.getJobConfigurationsAndSource()
     grid = state.gauge.getGrid()
     
@@ -55,8 +76,10 @@ def enqueueStandardHadronsWorkflow(state : State, jman : JobManager,
             HadronsComputeAction(machine=machine, account=account, queue=queue, time=time, spec=spec, mpi=mpi)
             )
 
-        #Todo: stage out
-
+        if stage_out:
+            workflow.append(TransferFromAction(machine=machine, source_path=job_dir, dest_endpoint=stage_out[0], dest_path=stage_out[1])) 
+            
+            
         with jman as jd:
             jd.enqueueJob(workflow, group_name)
 
@@ -110,14 +133,14 @@ def getLatticeSize()->Tuple[int,int,int,int]:
 @tool
 def getDefaultRankGeometry(ranks : int)->Tuple[int,int,int,int]:
     """
-    Compute a suitable rank geometry for the job
+    Compute a suitable MPI decomposition given a specific total number of MPI ranks.
 
     Args:
-       ranks: The number of ranks to use
+       ranks: The total number of MPI ranks to use
     """
     geom, _ = defaultRankGeom(ranks, state_.gauge.getGrid())
     return geom
-
+  
 
 class JobSubmissionParameters(BaseModel):
     """Parameters for Job submission"""
@@ -127,7 +150,18 @@ class JobSubmissionParameters(BaseModel):
     duration: int = Field(...,description="The job time in seconds")
     rank_geom: Tuple[int,int,int,int] = Field(..., description="The MPI rank decomposition of the lattice. The four integers indicate the number of ranks in the x,y,z,t directions, respectively. The total number of ranks is the product of these four numbers.")
     job_group: str = Field(...,description="A name to assign this collection of jobs.")
-    
+    copy_out: Tuple[str,str] | None = Field(...,description="A tuple containing 1) the Globus endpoint UUID and 2) the base path, for copying out results to a remote machine. Use None if and only if the user specifies that they don't want to copy out the results.")
+
+
+
+@after_model
+def log_response(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+    """
+    Hook to debug model state after calls (sadly does not trigger before processing structured output)
+    """
+    print(f"Model state: {state}")
+    return None
+
 def hadronsSubmissionAgent(state : State, jman : JobManager, model):
     AgentPrint("""
 ---        
@@ -138,87 +172,183 @@ def hadronsSubmissionAgent(state : State, jman : JobManager, model):
     
     global state_
     state_ = state
-    
+
     sys = """
-    You are an agent responsible for gathering information from the user for submitting a collection of batch jobs to American Science Cloud (AmSC) compute resources via the IRI API (a REST API for controlling the compute resources)
+    You are a conversational agent responsible for gathering information from the user for submitting a collection of batch jobs to American Science Cloud (AmSC) compute resources via the IRI API (a REST API for controlling the compute resources)
 
-    Your task is to aid the user in selecting the parameters and using those to fill in a complete JobSubmissionParameters structure.
-
-    Workflow:
-    - For each parameter in JobSubmissionParameters, obtain the value by querying the user with an appropriate question.
-    - You MUST ensure that the user has specified values for ALL parameters before finishing your workflow.
-    - Continue asking questions until all fields are supplied or confirmed by the user
-    - Before finishing your workflow, go back over the user interactions and check that all parameters have been specified explicitly by the user.
+    To output text to the user, output a message containing the text for the user (questions, answers). The user's response will be contained in the next message. Your output *must* include either
+    1) ONE question
+    2) ONE answer to the user's previous question AND ONE further question
+    NEVER output text not intended for the user such as notes-to-self. See the output rules below.
     
-    Parameter rules:
-    - **Never** guess a parameter. The values should always be obtained from the user. Follow the User Query rules below for questions to the user.
-    - If you use a tool to obtain a value, always use that value as a suggestion to the user; never set a parameter value that is not specified or confirmed by the user.
-    - Never insert a question as the value of a particular parameter.
-    - Do not place a value into the final JSON unless the user explicitly provided or confirmed it
+    The overall goal of your conversation is to aid the user in choosing values for each for the fields in the schema JobSubmissionParameters (provided below).
+  
+    To formulate the response, you are free to call appropriate tools to obtain extra information to help the user.
 
-    Rules for specific parameters:
+    To identify if the user has chosen a value, confirm that the user's response is a statement describing a valid value for the parameter.
+    
+    Obtain the values for the parameters in the order they appear in JobSubmissionParameters
+    
+    If the user asks a question, you must answer it before asking any further questions
+
+    Once the user has specified all parameters, respond with "DONE"
+
+    DO NOT PERFORM ANY PLANNING STEPS
+    
+    You must adhere to the following rules:      
+    -----------------------------------------
+    Output rules
+    -----------------------------------------
+    - Never ask more than one question at a time. Always wait for the user to respond before asking your next question.
+    - In your response to the user, *never* include any reasoning, chain-of-thought or notes-to-self. Only ever include a single question or an answer followed by a question. For example, never output "We need to wait for user response."
+    - If you do decide to include reasoning in your output despite these explicit instructions *not to*, you may receive an error message. Do not apologize, simply generate the correct output
+    - If the user has not responsed to your question, do not think ahead to the next question. Wait for the user to respond.
+    
+    -------------------------------------------
+    General Parameter Rules:
+    -------------------------------------------
+    - **Never** guess a parameter. The values should always be obtained from the user. Never record a parameter value unless it has been explicitly provided by the user. Follow the User Query rules below for questions to the user.
+
+    -------------------------------------------
+    Tool Rules:    
+    -------------------------------------------
+    - If a tool provides a list of valid responses, only accept values from among that list as valid choices by the user. If you list the values, ensure you only list those returned by the tool; never make up entries.
+    - For getDefaultRankGeometry, the number of MPI ranks input to this tool must be that explicitly specified by the user. Never assume or guess a number of ranks
+    
+    -------------------------------------------
+    User Query rules:
+    -------------------------------------------
+    - Never ask if the user wants to specify a parameter; assume that the user wants to specify all parameters
+    - Be brief and to the point with your question, and do not ask for more than one value in a single question.
+    - If you ask a question where the user is asked to choose between a set of known options, first obtain the list of options (calling any appropriate tools) then list those options alongside the question in your response. If there are more than 6 choices, list only the first 6 and indicate that there are more options.
+    - If the user responds to a query with an invalid response, your response should explain that the choice is invalid and ask the question again. Never ask a question about the next field without a valid response to the current field.
+    - Instead of answering your question about a parameter, the user might respond to your query with a question of their own. If this occurs:
+         - On the first line of your response, answer the user's question
+         - On a separate line repeat the original question about the parameter but include a statement indicating that they can ask follow-up questions
+    
+    -------------------------------------------
+    Additional rules for specific parameters:   
+    -------------------------------------------
+
     - rank_geom:
-         - First, always ask the user to provide the MPI rank decomposition
-         - if the user needs reminding of the lattice size, use the tool getLatticeSize to obtain it
-         - if the user wants help in choosing an appropriate decomposition, perform the following workflow. Do not skip steps.
-               1) ask the user for the total number of ranks then use the getDefaultRankGeometry tool to obtain a suggested decomposition. This is only a suggestion.
-               2) output this suggestion using the provideInformationToUser tool
-               3) ask the user again to either accept this suggestion or provide the rank decomposition
-         - once the user has specified a value, do not ask them again to confirm
-    
+        - First, ALWAYS ask the user to provide the MPI rank decomposition. Always include the lattice size, which you can obtain from the getLatticeSize tool. Mention that you can help them choose a decomposition. Never ask for the total number of MPI ranks unless you are helping choose the geometry as part of the workflow below.
+        - rank_geom is a blocking parameter. While rank_geom is unresolved, you MUST NOT ask about or advance to any other JobSubmissionParameters field.
+
+        - If the user asks for help choosing a decomposition, follow this workflow exactly and do not deviate:
+
+            1) You MUST obtain the number of MPI ranks explicitly from the user.
+               - NEVER infer, derive, or guess the number of ranks from any other information.
+               - Check the last user response. If it contains the number of ranks, use that value. If the user has not explicitly provided the number of ranks, ask only:
+                 "How many MPI ranks will this job use?"
+
+            2) After the user provides a valid integer number of ranks, you MUST immediately call getDefaultRankGeometry with that value.
+
+            3) Your next response MUST present the suggested decomposition and ask for confirmation or an alternative decomposition.
+               - Do not ask about any other parameter in this response.
+
+            4) Stay in the rank_geom flow until the user either confirms the suggested decomposition or supplies a different valid decomposition. Repeat steps 2-4 if the user asks for a geometry with a different number of ranks.
+
+          Never start this workflow unless the user has explicitly asked for help choosing the decomposition.
+       
     - duration
-         - the value you put in the JSON must be in *seconds*.
-         - if the user provides a value in other unit (minutes, hours, etc) do the following. Do not skip steps.
-             1) convert these numbers to seconds
-             2) output the value in seconds to the user the provideInformationToUser tool and explain that you converted to seconds
+         - if the user provides a value in any unit other than seconds (e.g. minutes, hours, etc), convert the user's response to seconds then output the value in seconds and explain that you converted to seconds on a separate line before your next question
+           For example
+           "You:  What is the duration of each run? You can answer in any unit.
+            Human: 5 mins
+            You: I've converted this to 300 seconds
+                 <NEXT QUESTION>
+           "
 
     - job_group         
-         - Explain that this parameter distinguishes between different job collections. It is used as the name of a parent directory within the sandbox to keep different collections separate.
-    
-    Tool rules:
-    - If a tool provides a list of valid responses, only accept values from among that list as valid choices by the user. If you list the values, ensure you only list those returned by the tool; never make up entries.
-    
-    User Query rules:
-    - Use the getUserInput tool to query the user
-    - Be brief and to the point with your questions. Prefer asking multiple consecutive questions rather than one question that requires specifying many choices.
-    - If you ask a question where the user is asked to choose between a set of known options, first obtain the list of options (calling any appropriate tools) then list those options. If there are more than 6 choices, list only the first 6 and indicate that there are more options.
-    - If the user responds to a query with an invalid response, always explain that the response is invalid and ask again, repeating this process until a valid response is provided. Never accept an invalid response.
-    - Instead of answering your question about a parameter, the user might respond to your query with a question. If this occurs, perform the following workflow sequentially. Do not skip steps.
-       1) answer the user's question using provideInformationToUser tool
-       2) ask whether the user has any follow-up questions using getUserInput. If so, repeat steps 1 and 2 until the user is satisfied.
-       3) repeat the original question about the parameter. Never move onto another parameter until the user has specified a value.
+         - In your response, on a separate line before your question, explain that this parameter distinguishes between different job collections. It is used as the name of a parent directory within the sandbox to keep different collections separate.
 
-    Your final output must be in JSON format and adhere to the following schema:    
+    - copy_out
+
+      For this parameter, perform the following:
+      1) For your first question, you MUST ask:
+        "Do you want to copy results to a remote machine for postprocessing?"  
+
+      2) If the user says yes:
+          - Ask the user to provide the globus endpoint
+          - Ask the user to obtain the base path
+
+         If the user says no:
+          - set copy_out to None
+    
+      Note that we are using NERSC's SuperFacility API to initiate these transfers, which also accepts special UUIDs "dtn", "hpss" or "perlmutter" in place of regular ID strings.
+
+    -------------------------------------------
+    Schema for fields you must populate
+    -------------------------------------------
+
+    The fields you must obtain values for are listed in the following schema:
     """ + json.dumps(JobSubmissionParameters.model_json_schema())
 
-    tools = [getUserInput,provideInformationToUser,
-             agentGetKnownMachines,agentGetUserAccounts,
+    
+    tools = [agentGetKnownMachines,agentGetUserAccounts,
              getLatticeSize,getDefaultRankGeometry,
              agentGetMachineQueues]
     config = {"configurable": {"thread_id": "1"}}
-    agent = create_agent(model=model, tools=tools, system_prompt=sys, response_format=JobSubmissionParameters, checkpointer=MemorySaver())
+    agent = create_agent(model=model, tools=tools, system_prompt=sys)
 
+
+    output_sys = """
+    You are an agent responsible for inserting information from the user into a structured output with the schema below.
+
+    Use your message history to identify the user's decision for a parameter
+
+    Determine whether the user has chosen a value by identifying whether the user's response is a statement describing a valid value for the parameter.
+
+    You must identify the user's decision for all parameters
+
+    - **Never** guess a parameter. The values should always be obtained from the user. Follow the User Query rules below for questions to the user.
+
+    You must return JSON formated output in the following schema:
+    """ + json.dumps(JobSubmissionParameters.model_json_schema()) 
+
+    
+    final_output_agent = create_agent(model=model, system_prompt=output_sys, response_format=JobSubmissionParameters)
+    
     user_interactions = [ HumanMessage("Start your workflow") ]
     accepted = False
     obj = None
     while(accepted == False):
         try:
             resp = agent.invoke({ "messages": user_interactions }, config=config)
-            obj = resp["structured_response"]        
-            user_interactions = resp['messages']
+            resp_msg = resp['messages'][-1]
+
+            #gpt-oss-120b with the AmSC LLM services sometimes runs ahead of itself with intervening blocks of reasoning output directly into the content in xml-like tags.
+            #However it seems that the content before the first tag is the intended user output.
+            if "<reasoning>" in resp_msg.content:
+                resp_msg = AIMessage(content=resp_msg.content[:resp_msg.content.find('<reasoning>')])               
+            
+            user_interactions.append(resp_msg)
+
+            resp_content = resp_msg.content
+            
         except Exception as e:
-            user_interactions = agent.get_state(config).values["messages"]
+            print("CAUGHT ERROR",e,"\n",vars(e))
+
             user_interactions.append(HumanMessage(f"Encountered an error: {e}"))
             continue
+        
+        if resp_content == "DONE":
+            #Formally parse the message chain into structured output
+            resp = final_output_agent.invoke({ "messages": user_interactions })
+            obj = resp['structured_response']           
             
-        #Human validation
-        output = f"Obtained:\n" + prettyPrintPydantic(obj)
-        AgentPrint(output)
-
-        accepted = queryYesNo("Is this correct?")
-        if(accepted == False):
-            reason = AgentInput("Explain what is wrong: ")
-            user_interactions.append(HumanMessage(f"Your previous response was not accepted for the following reason: {reason}"))
-
-    AgentPrint("Submitting job to workflow manager...")            
-    enqueueStandardHadronsWorkflow(state, jman, obj.rank_geom, obj.machine, obj.job_group, obj.account, obj.queue, str(obj.duration))
+            #Human validation
+            output = f"Obtained:\n" + prettyPrintPydantic(obj)
+            AgentPrint(output)
+            
+            accepted = queryYesNo("Is this correct?")
+            
+            if(accepted == False):
+                reason = AgentInput("Explain what is wrong: ")
+                user_interactions.append(HumanMessage(f"Your previous response was not accepted for the following reason: {reason}"))
+            else:
+                break
+        else:
+            #Obtain the user response
+            user_resp = AgentInput(resp_content)
+            user_interactions.append(HumanMessage(user_resp))

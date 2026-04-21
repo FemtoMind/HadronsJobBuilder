@@ -30,7 +30,7 @@ class LoadGauge(BaseModel):
     def setXML(self,xml):
         opt = xml.addModule("gauge","MIO::LoadNersc")
         HadronsXML.setValue(opt, "file", self.stub)
-        xml.setTrajCounter(self.start, self.end, self.step)
+        xml.setTrajCounter(self.start, self.end + self.step, self.step) #note, the "end" parameter in Hadrons is not actually the last config but rather one step after!
 
     def setXMLsingle(self,xml,job_index, override_path = None  ):
         """
@@ -48,7 +48,7 @@ class LoadGauge(BaseModel):
         
         opt = xml.addModule("gauge","MIO::LoadNersc")
         HadronsXML.setValue(opt, "file", stub)
-        xml.setTrajCounter(ckpoint_idx, ckpoint_idx, 1)
+        xml.setTrajCounter(ckpoint_idx, ckpoint_idx+1, 1)
 
         
     def getJobConfigurationsAndSource(self):

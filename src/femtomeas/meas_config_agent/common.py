@@ -144,6 +144,18 @@ Your output must be in JSON format. Use the following schema:
 
         return obj
 
+
+def getStructuredResponse(response, schema):
+    """
+    Work around buggy combination of model and LangChain where using ToolStrategy causes the structured output to appear in the message content and not separately
+    """
+    if "structured_response" in response:
+        return response["structured_response"]
+    else:
+        last_message = response["messages"][-1].content
+        #print("LAST MESSAGE", last_message)
+        return schema.model_validate_json(last_message)
+
     
 def spaceSeparateSeq(seq):
     r = ""
