@@ -352,3 +352,6 @@ def hadronsSubmissionAgent(state : State, jman : JobManager, model):
             #Obtain the user response
             user_resp = AgentInput(resp_content)
             user_interactions.append(HumanMessage(user_resp))
+
+    AgentPrint("Submitting job to workflow manager...")
+    enqueueStandardHadronsWorkflow(state, jman, obj.rank_geom, obj.machine, obj.job_group, obj.account, obj.queue, str(obj.duration))            

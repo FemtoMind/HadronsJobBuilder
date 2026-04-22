@@ -11,7 +11,8 @@ from femtomeas.workflow_manager.manager_config import parseManagerConfigStr
 import base64
 from .utils import make_scroll_callback
 
-app_dash = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+#app_dash = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app_dash = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
 
 startup_controls = dbc.Container(
     [

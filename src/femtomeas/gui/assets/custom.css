@@ -1,11 +1,244 @@
+.my-chat,
+.my-chat .chat-container,
+.my-chat .chat-messages,
+.my-chat .chat-input,
+.my-chat .message-input-container,
+.my-chat .dropdownMenu,
+.my-chat .file-preview-container {
+    background-color: var(--bs-body-bg) !important;
+    color: var(--bs-body-color) !important;
+    border-color: var(--bs-border-color) !important;
+}
+
+.my-chat .chat-bubble {
+    background-color: color-mix(in srgb, var(--bs-body-bg) 85%, white 15%) !important;
+    color: var(--bs-body-color) !important;
+    border: 1px solid var(--bs-border-color) !important;
+}
+.my-chat .chat-bubble.assistant {
+    background-color: color-mix(in srgb, var(--bs-body-bg) 88%, white 12%) !important;
+}
+
+.my-chat .chat-bubble.user {
+    background-color: color-mix(in srgb, var(--bs-primary) 20%, var(--bs-body-bg) 80%) !important;
+}
+
+/* Markdown content inside bubbles */
+.my-chat .markdown-content,
+.my-chat .markdown-content p,
+.my-chat .markdown-content li,
+.my-chat .markdown-content h1,
+.my-chat .markdown-content h2,
+.my-chat .markdown-content h3,
+.my-chat .markdown-content h4,
+.my-chat .markdown-content h5,
+.my-chat .markdown-content h6 {
+    color: var(--bs-body-color) !important;
+}
+
+/* Links */
+.my-chat .markdown-content a,
+.my-chat .user .markdown-content a {
+    color: var(--bs-link-color) !important;
+    text-decoration: underline;
+}
+
+/* Code blocks and inline code */
 .my-chat pre,
 .my-chat code {
-  background: transparent !important;
-  color: #000 !important;
+    background-color: var(--bs-secondary-bg) !important;
+    color: var(--bs-body-color) !important;
+}
+
+.my-chat pre {
+    border: 1px solid var(--bs-border-color) !important;
+    border-radius: 0.5rem;
 }
 
 .my-chat pre code span {
-  background: transparent !important;
-  color: inherit !important;
+    background: transparent !important;
+    color: inherit !important;
+}
+
+/* Input area */
+.my-chat .message-input-container,
+.my-chat .message-input-field {
+    background-color: var(--bs-body-bg) !important;
+    color: var(--bs-body-color) !important;
+    border-color: var(--bs-border-color) !important;
+}
+
+.my-chat .message-input-field::placeholder {
+    color: var(--bs-secondary-color) !important;
+}
+
+.my-chat .message-input-field:focus {
+    outline: none !important;
+    box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25) !important;
+}
+
+/* Icon buttons */
+.my-chat .message-input-button,
+.my-chat .file-upload-button,
+.my-chat .dotsButton {
+    color: var(--bs-body-color) !important;
+    background: transparent !important;
+}
+
+.my-chat .dotsButton:hover {
+    background: var(--bs-tertiary-bg) !important;
+    border-radius: 50%;
+}
+
+/* TABLES */
+
+.my-chat .markdown-content table {
+    width: 100%;
+    margin: 10px 0;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+}
+
+.my-chat .markdown-content th,
+.my-chat .markdown-content td {
+    background-color: #2a2e32 !important;
+    color: #e9ecef !important;
+    padding: 10px 15px;
+    border: none !important;
+}
+
+.my-chat .markdown-content thead th,
+.my-chat .markdown-content tbody tr:first-child th,
+.my-chat .markdown-content tbody tr:first-child td {
+    box-shadow: inset 0 -2px 0 #495057 !important;
+    font-weight: 600;
+}
+
+.my-chat .markdown-content tbody tr,
+.my-chat .markdown-content tbody tr:nth-child(even) {
+    background-color: #2a2e32 !important;
+}
+
+.my-chat .markdown-content tbody tr:hover td {
+    background-color: #343a40 !important;
+}
+
+/*  TABS  */
+
+
+/* Base tab style (unselected) */
+.tab-parent .tab {
+    background-color: color-mix(in srgb, var(--bs-body-bg) 92%, black 8%) !important;
+    color: var(--bs-secondary-color) !important;
+    border: 1px solid var(--bs-border-color) !important;
+}
+
+/* Hover (optional but makes it feel right) */
+.tab-parent .tab:hover {
+    background-color: color-mix(in srgb, var(--bs-body-bg) 85%, black 15%) !important;
+    color: var(--bs-body-color) !important;
+}
+
+/* Selected tab */
+.tab-parent .tab--selected {
+    background-color: color-mix(in srgb, var(--bs-body-bg) 75%, white 10%) !important;
+    color: var(--bs-body-color) !important;
+    border-top: 2px solid var(--bs-primary) !important;
+}
+
+/* Prevent bright white background override */
+.tab-parent .tab--selected:hover {
+    background-color: color-mix(in srgb, var(--bs-body-bg) 75%, white 10%) !important;
+}
+
+
+/* JOB TAB PANE */
+
+/* Scope everything to the job tab */
+#job-tab-pane {
+    color: var(--bs-body-color);
+}
+
+/* AG Grid theme root */
+#job-tab-pane [class^="ag-theme-params-"] {
+    --ag-background-color: var(--bs-body-bg);
+    --ag-foreground-color: var(--bs-body-color);
+    --ag-text-color: var(--bs-body-color);
+
+    --ag-border-color: var(--bs-border-color);
+    --ag-header-background-color: color-mix(in srgb, var(--bs-body-bg) 88%, white 12%);
+    --ag-header-text-color: var(--bs-body-color);
+
+    --ag-row-border: 1px solid var(--bs-border-color);
+    --ag-odd-row-background-color: color-mix(in srgb, var(--bs-body-bg) 94%, white 6%);
+    --ag-row-hover-color: color-mix(in srgb, var(--bs-primary) 10%, var(--bs-body-bg) 90%);
+    --ag-selected-row-background-color: color-mix(in srgb, var(--bs-primary) 16%, var(--bs-body-bg) 84%);
+
+    --ag-input-background-color: var(--bs-body-bg);
+    --ag-input-text-color: var(--bs-body-color);
+    --ag-input-border: 1px solid var(--bs-border-color);
+
+    --ag-tab-bar-background-color: var(--bs-body-bg);
+    --ag-tab-bar-border: 1px solid var(--bs-border-color);
+    --ag-tab-text-color: var(--bs-secondary-color);
+    --ag-tab-selected-background-color: color-mix(in srgb, var(--bs-body-bg) 82%, white 18%);
+    --ag-tab-selected-text-color: var(--bs-body-color);
+    --ag-tab-hover-background-color: color-mix(in srgb, var(--bs-body-bg) 86%, white 14%);
+    --ag-tab-hover-text-color: var(--bs-body-color);
+}
+
+/* Grid cells and headers */
+#job-tab-pane .ag-root-wrapper,
+#job-tab-pane .ag-header,
+#job-tab-pane .ag-row,
+#job-tab-pane .ag-cell,
+#job-tab-pane .ag-overlay-loading-center,
+#job-tab-pane .ag-menu {
+    background-color: var(--bs-body-bg) !important;
+    color: var(--bs-body-color) !important;
+}
+
+#job-tab-pane .ag-header-cell,
+#job-tab-pane .ag-header-group-cell,
+#job-tab-pane .ag-cell {
+    color: var(--bs-body-color) !important;
+}
+
+#job-tab-pane .ag-header-cell {
+    background-color: color-mix(in srgb, var(--bs-body-bg) 88%, white 12%) !important;
+}
+
+#job-tab-pane .ag-row {
+    background-color: color-mix(in srgb, var(--bs-body-bg) 94%, white 6%) !important;
+}
+
+#job-tab-pane .ag-row.ag-row-hover::before {
+    background-color: var(--bs-primary) !important;
+    opacity: 0.10 !important;
+}
+
+#job-tab-pane .ag-paging-panel {
+    background-color: var(--bs-body-bg) !important;
+    color: var(--bs-body-color) !important;
+    border-top: 1px solid var(--bs-border-color) !important;
+}
+
+/* Log output boxes */
+#job-tab-pane .dash-textarea {
+    background-color: color-mix(in srgb, var(--bs-body-bg) 92%, white 8%) !important;
+    color: var(--bs-body-color) !important;
+    border: 1px solid var(--bs-border-color) !important;
+    caret-color: var(--bs-body-color) !important;
+}
+
+#job-tab-pane .dash-textarea:disabled {
+    background-color: color-mix(in srgb, var(--bs-body-bg) 92%, white 8%) !important;
+    color: var(--bs-body-color) !important;
+    opacity: 1 !important;
+    -webkit-text-fill-color: var(--bs-body-color) !important;
+}
+
+#job-tab-pane .dash-textarea::placeholder {
+    color: var(--bs-secondary-color) !important;
 }
 
