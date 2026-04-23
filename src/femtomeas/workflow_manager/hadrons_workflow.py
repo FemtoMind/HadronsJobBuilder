@@ -152,6 +152,9 @@ class JobSubmissionParameters(BaseModel):
     job_group: str = Field(...,description="A name to assign this collection of jobs.")
     copy_out: Tuple[str,str] | None = Field(...,description="A tuple containing 1) the Globus endpoint UUID and 2) the base path, for copying out results to a remote machine. Use None if and only if the user specifies that they don't want to copy out the results.")
 
+class ParameterCheck(BaseModel):
+    missing_parameters: List[str] =  Field(..., description="The list of parameters for which the users has not specified a value.")
+    
 
 
 @after_model
@@ -191,7 +194,7 @@ def hadronsSubmissionAgent(state : State, jman : JobManager, model):
     
     If the user asks a question, you must answer it before asking any further questions
 
-    Once the user has specified all parameters, respond with "DONE"
+    Once the user has specified all parameters, respond with "<DONE>" and nothing else.
 
     DO NOT PERFORM ANY PLANNING STEPS
     
@@ -291,7 +294,18 @@ def hadronsSubmissionAgent(state : State, jman : JobManager, model):
     config = {"configurable": {"thread_id": "1"}}
     agent = create_agent(model=model, tools=tools, system_prompt=sys)
 
+    check_complete_sys = """
+    You must check the message history to determine if the user has provided answers to all fields in the following schema:
+    """ + json.dumps(JobSubmissionParameters.model_json_schema()) + """
+    Identify all parameters that the user has not specified and output them into the missing_parameters field of your output.
+    If the user has specified all parameters, set missing_parameters to an empty list
 
+    Your output must be provided according to the following schema:
+    """ + json.dumps(ParameterCheck.model_json_schema())
+    
+
+    check_complete_agent = create_agent(model=model, system_prompt=check_complete_sys, response_format=ParameterCheck)
+    
     output_sys = """
     You are an agent responsible for inserting information from the user into a structured output with the schema below.
 
@@ -308,6 +322,8 @@ def hadronsSubmissionAgent(state : State, jman : JobManager, model):
 
     
     final_output_agent = create_agent(model=model, system_prompt=output_sys, response_format=JobSubmissionParameters)
+
+
     
     user_interactions = [ HumanMessage("Start your workflow") ]
     accepted = False
@@ -331,8 +347,19 @@ def hadronsSubmissionAgent(state : State, jman : JobManager, model):
 
             user_interactions.append(HumanMessage(f"Encountered an error: {e}"))
             continue
-        
-        if resp_content == "DONE":
+
+        if len(resp_content) == 0:
+            user_interactions.append(HumanMessage(f"Your previous had no content, try again"))
+            
+        elif "<DONE>" in resp_content:
+            #Use an agent to check that it really is done
+            resp = check_complete_agent.invoke({"messages" : user_interactions})
+            obj = resp['structured_response']
+            if len(obj.missing_parameters) > 0:
+                print("MISSING PARAMS", obj.missing_parameters)
+                user_interactions.append(HumanMessage(f"The following parameters have not yet been specified by the user: { obj.missing_parameters }. Work with the user to determine these parameters."))
+                continue
+                
             #Formally parse the message chain into structured output
             resp = final_output_agent.invoke({ "messages": user_interactions })
             obj = resp['structured_response']           

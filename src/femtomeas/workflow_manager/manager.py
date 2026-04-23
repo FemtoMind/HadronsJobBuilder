@@ -150,7 +150,7 @@ class ActionStatus(Enum):
     ACTIVE = 1 #a live action (any status not failed or completed, e.g. queued, new, etc)
     COMPLETED = 2 #action completed successfully
     FAILED = 3 #action failed
-        
+    
 class ActionManager:
     def _queryStatusInternal(self, machine, api_key):
         """Return the API status"""        
@@ -487,13 +487,17 @@ class JobData:
         self.progressActiveWorkflows()
     
     def countWorkflowsWithStatus(self, statuses : ActionStatus | list[ActionStatus]):
+        """
+        Count the number of workflows for which the head action (if not none) has a status in the provided list
+        """
+        
         with self.conn as conn:
             if isinstance(statuses, ActionStatus):            
-                return int(conn.execute("SELECT COUNT(*) FROM jobs WHERE head_action_status = ?", (statuses.name,) ).fetchone()[0])
+                return int(conn.execute("SELECT COUNT(*) FROM jobs WHERE head_action_class != ? AND head_action_status = ?", (ActionClass.NONE.name, statuses.name,) ).fetchone()[0])
             elif isinstance(statuses, list):
                 placeholders = ",".join("?" for _ in statuses)
                 names = [s.name for s in statuses]                
-                return int(conn.execute(f"SELECT COUNT(*) FROM jobs WHERE head_action_status IN ({placeholders})", (*names,) ).fetchone()[0])
+                return int(conn.execute(f"SELECT COUNT(*) FROM jobs WHERE head_action_class != ? AND head_action_status IN ({placeholders})", (ActionClass.NONE.name, *names) ).fetchone()[0])
             else:
                 raise Exception("Unexpected type for 'statuses'", type(statuses))
 
@@ -535,7 +539,7 @@ class JobManager:
         """
         def __nincomplete():
             with self._lock:
-                return self.job_data.countWorkflowsWithStatus([ ActionStatus.PENDING, ActionStatus.ACTIVE ])
+                return self.job_data.countWorkflowsWithStatus([ ActionStatus.PENDING, ActionStatus.ACTIVE, ActionStatus.COMPLETED ]) #note, complete (non-null) actions are awaiting progression
         
         if wait_until_done:
             while(__nincomplete() > 0):
