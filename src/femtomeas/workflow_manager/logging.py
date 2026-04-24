@@ -31,3 +31,16 @@ def updateGUI(task, content):
         update_gui_func(task, content)
 
 
+
+def defaultAPIuserQueryFunc(title, query):
+    if len(title):
+        print(title)
+    return input(query).strip()
+            
+api_query_user_func = defaultAPIuserQueryFunc
+
+def wfapiUserQuery(title, query):
+    """
+    Ask a query to the user, e.g. for obtaining login credentials
+    """
+    return api_query_user_func(title,query)

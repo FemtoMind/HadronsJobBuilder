@@ -51,7 +51,14 @@ def agentQuery(query):
     user_response = asyncio.run_coroutine_threadsafe(agent_recv_user_queue.get(), main_loop).result().strip()
     print("AGENT QUERY FUNCTION DETECTED USER RESPONSE", user_response)
     return user_response
-   
+
+user_input_popup_response_queue = asyncio.Queue()
+
+def userInputPopup(title,query):
+    sendToFrontend("user_input_popup", json.dumps({ "title" : title, "query" : query }))
+    user_response = asyncio.run_coroutine_threadsafe(user_input_popup_response_queue.get(), main_loop).result().strip()
+    return user_response
+ 
 server_workflow = None
 
 #Allow overriding server workflow
@@ -64,8 +71,9 @@ async def websocket_endpoint(websocket: WebSocket):
     assert server_workflow != None
     
     await websocket.accept()
-    global agent_recv_user_queue, send_queue
+    global agent_recv_user_queue, user_input_popup_response_queue, send_queue
     agent_recv_user_queue = asyncio.Queue()
+    user_input_popup_response_queue = asyncio.Queue()
     send_queue = asyncio.Queue()
     
     async def sender():
@@ -92,7 +100,9 @@ async def websocket_endpoint(websocket: WebSocket):
                nonlocal workflow_config
                workflow_config = json.loads(msg['content'])
                start_event.set()
-         
+            elif msg['task'] == 'user_input_popup_response':
+               await user_input_popup_response_queue.put(msg['content'])
+               
 
     try:
         sender_task = asyncio.create_task(sender())

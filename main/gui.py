@@ -1,4 +1,4 @@
-from femtomeas.gui.server import app, setServerWorkflow, agentPrint, agentQuery, workflowManagerLogGUI, workflowAPIlogGUI, sendToFrontend
+from femtomeas.gui.server import app, setServerWorkflow, agentPrint, agentQuery, workflowManagerLogGUI, workflowAPIlogGUI, sendToFrontend, userInputPopup
 from femtomeas.gui.frontend import app_dash
 from fastapi.middleware.wsgi import WSGIMiddleware
 import femtomeas.meas_config_agent.common as common
@@ -23,6 +23,7 @@ common.output_style = "markdown"
 wfman_logging.wfman_log_func = workflowManagerLogGUI
 wfman_logging.api_log_func = workflowAPIlogGUI
 wfman_logging.update_gui_func = sendToFrontend #allow the manager to send action status updates to the GUI tables
+wfman_logging.api_query_user_func = userInputPopup
 
 amsc_llm_0t = ChatOpenAI(
     model="gpt-oss-120b",

@@ -13,7 +13,7 @@ from pathlib import Path
 import globus_sdk
 from globus_sdk.exc import GlobusAPIError
 from .utils import checkSafePath
-from .logging import wfapiLog
+from .logging import wfapiLog, wfapiUserQuery
 
 known_machines = {  "Perlmutter" :
                     { "iriapi_base" : "https://api.iri.nersc.gov/api/v1",
@@ -126,13 +126,23 @@ def interactive_login(client: globus_sdk.NativeAppAuthClient) -> dict:
         requested_scopes=" ".join(sorted(REQUIRED_SCOPES)),
         refresh_tokens=True,
     )
-    #TODO: Need a GUI popup for the IRI login
+    query = f"""Open this URL, login, and consent:
+    { client.oauth2_get_authorize_url(query_params={"prompt": "login"}) }
+
+    Enter authorization code"""
     
-    print("Open this URL, login, and consent:")
-    print(client.oauth2_get_authorize_url(query_params={"prompt": "login"}))
-    
-    code = input("\nEnter authorization code: ").strip()
-    token_response = client.oauth2_exchange_code_for_tokens(code)
+    #print("Open this URL, login, and consent:")
+    #print(client.oauth2_get_authorize_url(query_params={"prompt": "login"}))    
+    #code = input("\nEnter authorization code: ").strip()
+    accept = False
+    while(not accept):
+        try:
+            code = wfapiUserQuery("IRI API login", query)
+            token_response = client.oauth2_exchange_code_for_tokens(code)
+            accept = True
+        except Exception as e:
+            continue
+        
     return token_response.by_resource_server[IRI_RESOURCE_SERVER]
 
 
@@ -543,7 +553,7 @@ def executeBatchJobCompat(machine: str, script_body: str,
     else:
         wfapiLog("Job submission failed, status:",status,"reason:", json.dumps(j,indent=2))
         raise Exception("Job submission failed")
-
+    
 
 def executeBatchJobTest(machine: str, job_run_dir):
     spec = {
@@ -603,7 +613,6 @@ def cancelJob(machine: str, jobid: str):
     j, status = delete(machine, f"compute/cancel/{rid}/{jobid}")
     if status != 204:
         raise Exception("Job cancellation failed:",json.dumps(j))
-
 
 
 
@@ -697,13 +706,13 @@ def globusCopyFromMachine(dest_endpoint: str, dest_path : str,
         raise Exception("Unknown machine endpoint")
 
     return _globusCopy(machine_globus_endpoints[machine], dest_endpoint, source_path, dest_path, machine, block_until_complete)
-    
 
 def remoteRun(machine: str, args : str | List[str] ):
     """
     Run a command on the remote machine login node. Note this does not support returning output
 
     Note: Currently requires Superfacility API and is restricted to NERSC
+    Note: Use "bash -c \"COMMAND\""
     """
     cmd = "bash -c \""
     if isinstance(args, list):
@@ -722,4 +731,4 @@ def remoteRun(machine: str, args : str | List[str] ):
     j, status=post(machine, f"utilities/command/{m}", data={"executable" : cmd}, base='sfapi_base', data_is_json=False)
 
     if status != 200:
-        raise Exception("Globus transfer failed, response content: " + json.dumps(j))
+        raise Exception("Remote execution failed, response content: " + json.dumps(j))
