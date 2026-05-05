@@ -225,7 +225,7 @@ if 0:
         time.sleep(10)
 
 if 0:
-    print(globusTransferStatus(machine, "1234"))
+    print(globusTransferStatus(machine, '61fc7889-4579-11f1-8b54-0ea3589134b3'))
         
 if 0:
     tid = globusCopyToMachine(machine, safe_dir + "/test_4_19", "dtn", "/global/cfs/cdirs/mp13/ckelly/globus_source_test_dir/test.dat")
@@ -233,15 +233,15 @@ if 0:
         print(globusTransferStatus(machine, tid))
         time.sleep(2)
 
-if 1:
-    tid = globusCopyFromMachine("dtn", "/global/cfs/cdirs/mp13/ckelly/globus_output_test_dir", machine, "/global/cfs/cdirs/mp13/ckelly/agent_safe_dir/test_group/4")
+if 0:
+    tid = globusCopyFromMachine("dtn", "/global/cfs/cdirs/mp13/ckelly/globus_output_test_dir", machine, "/global/cfs/cdirs/mp13/ckelly/agent_safe_dir/test_4_19/test.dat")
     for i in range(10):
         print(globusTransferStatus(machine, tid))
         time.sleep(2)
 
 
         
-if 0:
+if 1:
     #Test copying entire directories
     tid = globusCopyToMachine(machine, safe_dir, "dtn", "/global/cfs/cdirs/mp13/ckelly/globus_source_test_dir/test_dir")
     for i in range(10):

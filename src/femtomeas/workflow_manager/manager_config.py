@@ -2,11 +2,31 @@ from pathlib import Path
 from pydantic import BaseModel, Field, ValidationError
 from .api_general import setupWorkflowAgent
 from .hadrons import setHadronsInfo
+from . import globals
 
-class WorkflowConfig(BaseModel):
-    sfapi_key_path: str = Field(..., description="The path to the Superfacility API key")
-    iriapi_key_path: str = Field(..., description="The path to the IRI API key (will be created if doesn't yet exist)")
-    sandbox_directories: dict[str, str] = Field(..., description="A map of machine names to base sandbox directories")
+if globals.api_impl in ("SPOOF", "IRI_SF_HYBRID", "SF"):
+    class WorkflowConfig(BaseModel):
+        sfapi_key_path: str = Field(..., description="The path to the Superfacility API key")
+        iriapi_key_path: str = Field(..., description="The path to the IRI API key (will be created if doesn't yet exist)")
+        sandbox_directories: dict[str, str] = Field(..., description="A map of machine names to base sandbox directories")
+
+    def setupManager(config : dict):
+        setupWorkflowAgent(config.workflow.sfapi_key_path, config.workflow.iriapi_key_path, config.workflow.sandbox_directories)
+        setHadronsInfo(config.model_dump()["hadrons"])
+        
+elif globals.api_impl == "IRI":
+    #For convenience we use separate files for the IRI and data transfer tokens, as the latter will eventually no longer be needed
+    class WorkflowConfig(BaseModel):
+        iriapi_key_path: str = Field(..., description="The path to the IRI API key (will be created if doesn't yet exist)")
+        transferapi_key_path: str = Field(..., description="The path to the Data Transfer API key (will be created if doesn't yet exist)")
+        sandbox_directories: dict[str, str] = Field(..., description="A map of machine names to base sandbox directories")
+
+    def setupManager(config : dict):
+        setupWorkflowAgent(config.workflow.iriapi_key_path, config.workflow.transferapi_key_path, config.workflow.sandbox_directories)
+        setHadronsInfo(config.model_dump()["hadrons"])
+else:
+    raise Exception("Unknown API implementation")
+
 
 class HadronsConfig(BaseModel):
     bin: str = Field(..., description="The path to the 'bin' directory of the Hadrons install")
@@ -15,10 +35,6 @@ class HadronsConfig(BaseModel):
 class ManagerConfig(BaseModel):
     workflow: WorkflowConfig = Field(..., description="General manager arguments")
     hadrons: dict[str, HadronsConfig] = Field(..., description="A map of machine names to HadronsConfig structures")
-
-def setupManager(config : dict):
-    setupWorkflowAgent(config.workflow.sfapi_key_path, config.workflow.iriapi_key_path, config.workflow.sandbox_directories)
-    setHadronsInfo(config.model_dump()["hadrons"])
 
 
 def parseManagerConfigStr(json_str : str)->dict:
