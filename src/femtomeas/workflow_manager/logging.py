@@ -1,4 +1,4 @@
-from femtomeas.meas_config_agent.common import cmdlinePrint
+from femtomeas.agent_common.common import cmdlinePrint
 
 #Control over the function used for workflow manager logging
 wfman_log_func = cmdlinePrint

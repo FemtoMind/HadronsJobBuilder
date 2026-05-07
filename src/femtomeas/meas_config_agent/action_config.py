@@ -14,7 +14,7 @@ from langchain.agents import create_agent
 import xml.etree.ElementTree as ET
 from .hadrons_xml import HadronsXML
 
-from .common import *
+from femtomeas.agent_common.common import *
 
 
 class DWFaction(BaseModel):

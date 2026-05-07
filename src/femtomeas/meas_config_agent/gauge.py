@@ -15,7 +15,7 @@ from langgraph.store.memory import InMemoryStore
 
 import os
 import json
-from .common import *
+from femtomeas.agent_common.common import *
 from .hadrons_xml import HadronsXML
 
 class LoadGauge(BaseModel):

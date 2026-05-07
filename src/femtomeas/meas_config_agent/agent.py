@@ -1,5 +1,5 @@
 import os
-from .common import *
+from femtomeas.agent_common.common import *
 from .state import *
 from .hadrons_xml import HadronsXML
 import femtomeas.workflow_manager as wfman

@@ -11,7 +11,7 @@ from .propagator_config import *
 from .gauge import *
 from .eigenvectors import *
 from .hadrons_xml import HadronsXML
-from .common import Print
+from femtomeas.agent_common.common import Print
 
 def checkpointState(state, filename):
     #j = json.dumps({k: v.model_dump() for k, v in state.items()}, indent=2)

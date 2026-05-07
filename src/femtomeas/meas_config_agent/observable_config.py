@@ -9,7 +9,7 @@ from langchain.messages import (
 from pydantic import BaseModel, Field, ConfigDict, NonNegativeInt, TypeAdapter
 from typing import Literal, Union, List, Optional, Tuple
 from langchain.agents.structured_output import ToolStrategy, ProviderStrategy
-from .common import *
+from femtomeas.agent_common.common import *
 from .hadrons_xml import HadronsXML
 
 def mesonModuleXML(name, xml, gammas_snk_src: str, q1 : str, q2 : str):

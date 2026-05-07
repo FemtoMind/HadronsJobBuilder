@@ -8,7 +8,7 @@ from langchain.messages import (
 from langchain.agents import create_agent
 from pydantic import BaseModel, Field, ConfigDict, NonNegativeInt, TypeAdapter
 from typing import Literal, Union, List, Optional, Tuple
-from .common import *
+from femtomeas.agent_common.common import *
 
 class Pion2ptObs(BaseModel):
    """The pion two-point function. This observable involves a contraction of two propagators, which may be the same."""

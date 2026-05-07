@@ -1,7 +1,7 @@
 from femtomeas.gui.server import app, setServerWorkflow, agentPrint, agentQuery, workflowManagerLogGUI, workflowAPIlogGUI, sendToFrontend, userInputPopup
 from femtomeas.gui.frontend import app_dash
 from fastapi.middleware.wsgi import WSGIMiddleware
-import femtomeas.meas_config_agent.common as common
+import femtomeas.agent_common.common as common
 from femtomeas.workflow_manager.manager_config import readManagerConfigStr
 from femtomeas.workflow_manager.manager import JobManager, ActionClass
 from femtomeas.workflow_manager.hadrons_workflow import hadronsSubmissionAgent
@@ -14,6 +14,8 @@ import threading
 import femtomeas.workflow_manager.logging as wfman_logging
 
 from langchain_openai import ChatOpenAI
+#from langchain_nvidia_ai_endpoints import ChatNVIDIA
+
 from femtomeas.meas_config_agent import agent
 
 common.print_func = agentPrint
@@ -30,12 +32,16 @@ amsc_llm_0t = ChatOpenAI(
     base_url="https://api.i2-core.american-science-cloud.org/",
     temperature=0
 )
+# nemotron = ChatNVIDIA(
+#     model="nemotron-super-3",
+#     base_url="https://api.i2-core.american-science-cloud.org/v1",
+#     temperature=0
+# )
+
+
 
 llm = amsc_llm_0t
-
-#def global_exception_handler(exctype, value, traceback):
-#    print(f"Caught global error: {exctype}:{value}:{traceback}")
-#sys.excepthook = global_exception_handler
+#llm = nemotron
 
 def thread_error_handler(args):
     tb_list = traceback.format_exception(args.exc_type, args.exc_value, args.exc_traceback)

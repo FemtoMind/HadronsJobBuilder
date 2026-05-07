@@ -12,7 +12,7 @@ from langchain.agents.structured_output import ToolStrategy, ProviderStrategy
 from langchain.agents import create_agent
 from .hadrons_xml import HadronsXML
 import json
-from .common import *
+from femtomeas.agent_common.common import *
 
 class PointSource(BaseModel):
     """A point or single-location source"""
