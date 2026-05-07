@@ -27,9 +27,11 @@ def getChatTabContent():
            State("chat-component", "messages"),
            prevent_initial_call=True
           )
-def receiveAgentResponse(server_message, messages):
+def receiveAgentResponse(server_message, messages):    
     if server_message and (j := json.loads(server_message['data']))['task'] == 'agent_output':
-        agent_message = j['content']        
+        agent_message = j['content']
+        print("CHAT COMPONENT GOT AGENT MESSAGE",agent_message)
+        print("APPENDING TO MESSAGES", messages)            
         return messages + [ { "role" : "assistant", "content" : agent_message } ]
     raise PreventUpdate
 

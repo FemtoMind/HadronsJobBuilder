@@ -26,7 +26,6 @@ def sendToFrontend(task: str, content: str):
    content: the data
    """
    asyncio.run_coroutine_threadsafe(send_queue.put({"task" : task, "content" : content }), main_loop).result()
-   time.sleep(0.3) #allows successive calls to print to all render correctly (seems to be an inherent limitation in dash that callbacks in quick succession do not work well)
    
 def printToString(*args, **kwargs):
    buf = io.StringIO()
@@ -82,7 +81,8 @@ async def websocket_endpoint(websocket: WebSocket):
           print("SENDER",json)
           
           await websocket.send_json(json)
-
+          await asyncio.sleep(0.3) #allows successive calls to print to all render correctly (seems to be an inherent limitation in dash that callbacks in quick succession do not work well)
+          
     #Task that receives input from the frontend and redirects as appropriate
     #Arguments to agent start
     workflow_config = None

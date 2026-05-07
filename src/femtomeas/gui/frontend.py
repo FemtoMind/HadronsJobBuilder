@@ -14,6 +14,13 @@ from .utils import make_scroll_callback
 #app_dash = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app_dash = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
 
+app_dash.enable_dev_tools(
+    debug=True,
+    dev_tools_ui=True,
+    dev_tools_props_check=True,
+    dev_tools_hot_reload=True
+)
+
 from .frontend_content.configure_page import *
 from .frontend_content.chat_tab import *
 from .frontend_content.workflow_monitor import *

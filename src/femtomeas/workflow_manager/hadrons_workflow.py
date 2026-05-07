@@ -147,11 +147,21 @@ class JobSubmissionParameters(BaseModel):
     machine: str =  Field(..., description="The name of the machine on which the jobs will be executed")
     account: str = Field(..., description="The user account on the machine")
     queue: str = Field(..., description="The queue on the machine")
-    duration: int = Field(...,description="The job time in seconds")
+    duration: PositiveInt = Field(...,description="The job time in seconds")
     rank_geom: Tuple[int,int,int,int] = Field(..., description="The MPI rank decomposition of the lattice. The four integers indicate the number of ranks in the x,y,z,t directions, respectively. The total number of ranks is the product of these four numbers.")
     job_group: str = Field(...,description="A name to assign this collection of jobs.")
     copy_out: Tuple[str,str] | None = Field(...,description="A tuple containing 1) the Globus endpoint UUID and 2) the base path, for copying out results to a remote machine. Use None if and only if the user specifies that they don't want to copy out the results.")
 
+    def validate(self):       
+        if self.machine not in getKnownMachines():
+            return (False, f"Machine {self.machine} not in list of known machines: {getKnownMachines()}")
+        elif self.account not in getUserAccountProjects(self.machine):
+            return (False, f"Account {self.account} not in list of available accounts: {getUserAccountProjects(self.machine)}")
+        elif self.queue not in (queues := [ q[0] for q in getMachineQueues(self.machine) ] ):
+            return (False, f"Queue {self.queue} not in list of available queues: {queues}")
+        return (True, "")
+        
+        
 class ParameterCheck(BaseModel):
     missing_parameters: List[str] =  Field(..., description="The list of parameters for which the users has not specified a value.")
     
@@ -281,6 +291,14 @@ def hadronsSubmissionAgent(state : State, jman : JobManager, model):
       Note that we are using NERSC's SuperFacility API to initiate these transfers, which also accepts special UUIDs "dtn", "hpss" or "perlmutter" in place of regular ID strings.
 
     -------------------------------------------
+    Rules for dealing with validation failures
+    -------------------------------------------
+    If you receive a message saying "Your previous response failed validation", perform the following:
+    -You must explain that you received an error
+    -If the reason is due to an obvious typing error by the user, correct that error and explain to the user what you corrected, then terminate your workflow. Do not repeat questions for parameters not associated with the validation error.
+    -If the solution to the validation error is not clear, explain to the user the nature of the error and ask them to provide a solution
+    
+    -------------------------------------------
     Schema for fields you must populate
     -------------------------------------------
 
@@ -317,6 +335,14 @@ def hadronsSubmissionAgent(state : State, jman : JobManager, model):
 
     - **Never** guess a parameter. The values should always be obtained from the user. Follow the User Query rules below for questions to the user.
 
+    -------------------------
+    Specific parameter rules
+    -------------------------
+    For the copy_out parameter, if the user does not want to copy out the data, set this parameter to None
+    
+    ------------------------
+    Output rules
+    ------------------------
     You must return JSON formated output in the following schema:
     """ + json.dumps(JobSubmissionParameters.model_json_schema()) 
 
@@ -343,8 +369,6 @@ def hadronsSubmissionAgent(state : State, jman : JobManager, model):
             resp_content = resp_msg.content
             
         except Exception as e:
-            print("CAUGHT ERROR",e,"\n",vars(e))
-
             user_interactions.append(HumanMessage(f"Encountered an error: {e}"))
             continue
 
@@ -353,16 +377,41 @@ def hadronsSubmissionAgent(state : State, jman : JobManager, model):
             
         elif "<DONE>" in resp_content:
             #Use an agent to check that it really is done
-            resp = check_complete_agent.invoke({"messages" : user_interactions})
-            obj = resp['structured_response']
-            if len(obj.missing_parameters) > 0:
-                print("MISSING PARAMS", obj.missing_parameters)
-                user_interactions.append(HumanMessage(f"The following parameters have not yet been specified by the user: { obj.missing_parameters }. Work with the user to determine these parameters."))
+            parsed=False
+            do_continue=False
+            while not parsed:
+                try:
+                    resp = check_complete_agent.invoke({"messages" : user_interactions})
+                    obj = resp['structured_response']
+                    parsed=True
+                    if len(obj.missing_parameters) > 0:
+                        user_interactions.append(HumanMessage(f"The following parameters have not yet been specified by the user: { obj.missing_parameters }. Work with the user to determine these parameters."))
+                        do_continue=True
+                        break
+                    
+                except Exception as e:
+                    print("CHECK COMPLETE AGENT PARSE ERROR",e)
+            if do_continue:
                 continue
-                
+
+                    
             #Formally parse the message chain into structured output
-            resp = final_output_agent.invoke({ "messages": user_interactions })
-            obj = resp['structured_response']           
+            parsed=False
+            while not parsed:
+                try:
+                    resp = final_output_agent.invoke({ "messages": user_interactions })
+                    obj = resp['structured_response']
+                    parsed=True
+                except Exception as e:
+                    print("FINAL OUTPUT AGENT PARSE ERROR",e)
+                    
+
+            #Automatic validation
+            valid = obj.validate()
+            if not valid[0]:
+                print("VALIDATION FAIL",valid)
+                user_interactions.append(HumanMessage(f"Your previous response failed validation due to: {valid[1]}"))
+                continue
             
             #Human validation
             output = f"Obtained:\n" + prettyPrintPydantic(obj)

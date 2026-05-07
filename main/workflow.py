@@ -3,7 +3,7 @@ from langchain_openai import ChatOpenAI
 from femtomeas.meas_config_agent import agent
 from femtomeas.workflow_manager.manager_config import readManagerConfigFile
 from femtomeas.workflow_manager.manager import JobManager
-from femtomeas.workflow_manager.hadrons_workflow import enqueueStandardHadronsWorkflow
+from femtomeas.workflow_manager.hadrons_workflow import hadronsSubmissionAgent
 
 import argparse
 
@@ -102,10 +102,6 @@ if __name__ == "__main__":
         jman.start()
         
         if not args.skip_agent:
-            #For now we just use Perlmutter with 1 rank for simplicity
-            mpi = (1,1,1,1)
-            machine = "Perlmutter"
-            enqueueStandardHadronsWorkflow(state, jman, mpi, machine, "test_group", "amsc013_g", "debug", "300")
-
+            hadronsSubmissionAgent(state, jman, llm)
         
         jman.stop() #will wait until the job queue is complete
