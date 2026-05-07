@@ -153,7 +153,7 @@ class JobSubmissionParameters(BaseModel):
     job_group: str = Field(...,description="A name to assign this collection of jobs.")
     copy_out: Tuple[str,str] | None = Field(...,description="A tuple containing 1) the Globus endpoint UUID and 2) the base path, for copying out results to a remote machine. Use None if and only if the user specifies that they don't want to copy out the results.")
 
-    def validate(self):       
+    def check(self):       
         if self.machine not in getKnownMachines():
             return (False, f"Machine {self.machine} not in list of known machines: {getKnownMachines()}")
         elif self.account not in getUserAccountProjects(self.machine):

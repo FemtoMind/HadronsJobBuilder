@@ -82,7 +82,7 @@ if __name__ == "__main__":
     args = parse_args()
 
     reload_checkpoint_file = args.reload_checkpoint if args.reload_checkpoint is not None else "ckpoint_state.json" #NB: argparse default argument (const) is only used if the arg is specified but a value not provided, not when the arg is not specified
-    reload_checkpoint = args.reload_checkpoint is not None
+    reload_checkpoint = args.reload_checkpoint is not None and os.path.exists(reload_checkpoint_file)
 
     write_xml_file = args.write_xml
     write_xml = args.write_xml is not None

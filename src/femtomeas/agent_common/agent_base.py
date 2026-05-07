@@ -8,7 +8,7 @@ from langchain.messages import (
     AIMessage
 )
 
-from pydantic import BaseModel, Field, ConfigDict, NonNegativeInt, TypeAdapter, PositiveFloat, PositiveInt, create_model
+from pydantic import BaseModel, Field, ConfigDict, NonNegativeInt, TypeAdapter, PositiveFloat, PositiveInt, create_model, model_validator
 from typing import Literal, Union, List, Optional, Tuple, Any
 from langchain.agents.structured_output import ToolStrategy, ProviderStrategy
 from langchain.agents import create_agent
@@ -20,7 +20,6 @@ from langchain.tools import tool
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.runtime import Runtime
 import re
-
 
 from typing import Callable
 from langchain.agents.middleware import (
@@ -50,7 +49,12 @@ def promptStringList(lines : List[str], indent : int = 0):
 class ParameterCheck(BaseModel):
     missing_parameters: List[str] =  Field(..., description="The list of parameters for which the users has not specified a value.")
 
-
+    # @model_validator(mode="before")
+    # @classmethod
+    # def strip_reasoning(cls, data):
+    #     print("VALIDATING",data,"TYPE",type(data))
+    #     return data
+    
 def invokeMainAgent(agent, user_interactions, config):
     """Invoke the agent, updating the message list with the output and returning the response message content
     If an error occured, None is returned indicating to continue to the next iteration of the main while loop
@@ -85,6 +89,29 @@ def removeDoneTagFromLastMessage(user_interactions):
     con = re.sub(r'<DONE>', '', user_interactions[-1].content)
     user_interactions[-1] = AIMessage(con)            
 
+
+# def invokeAgentWithStructuredOutput(agent, messages, output_format):
+#     """It is assumed that the system prompt contains instructions to output in this format"""
+#     internal_context = messages.copy()
+    
+#     parsed=False
+#     while not parsed:
+#         try:
+#             resp = agent.invoke({"messages" : internal_context})
+#             content = resp["messages"][-1].content
+            
+#             print("invokeAgentWithStructuredOutput got",content)
+#             obj = output_format.model_validate_json(content)
+            
+#             #obj = resp['structured_response']
+#             parsed=True
+                
+#         except Exception as e:
+#             print(f"invokeAgentWithStructuredOutput to { output_format.__name__ } PARSE ERROR {e}")
+#             internal_context.append( HumanMessage(f"Encountered an error: {e}") )
+    
+#     return obj
+            
 def checkAllParametersSpecified(check_complete_agent, user_interactions):
     """
     Check all the parameters have been specified
@@ -95,6 +122,7 @@ def checkAllParametersSpecified(check_complete_agent, user_interactions):
     internal_context = user_interactions.copy()
     
     #Use an agent to check that it really is done
+    
     parsed=False
     while not parsed:
         try:
@@ -105,7 +133,9 @@ def checkAllParametersSpecified(check_complete_agent, user_interactions):
         except Exception as e:
             print("CHECK COMPLETE AGENT PARSE ERROR",e)
             internal_context.append( HumanMessage(f"Encountered an error: {e}") )
-                                                  
+
+    #obj = invokeAgentWithStructuredOutput(check_complete_agent, user_interactions, ParameterCheck)
+    
     if len(obj.missing_parameters) > 0:
         print("CHECK COMPLETE AGENT FOUND MISSING PARAMETERS:",obj.missing_parameters)
         #Remove the <DONE> tag from the previous message, it is not done!
@@ -116,8 +146,10 @@ def checkAllParametersSpecified(check_complete_agent, user_interactions):
         return True
 
 
-def finalAgentStructuredOutputParse(final_output_agent, user_interactions):
+def finalAgentStructuredOutputParse(final_output_agent, user_interactions, structured_output_model):
     #Formally parse the message chain into structured output
+    #return invokeAgentWithStructuredOutput(final_output_agent, user_interactions, structured_output_model)
+    
     parsed=False
     internal_context = user_interactions.copy()
 
@@ -128,7 +160,7 @@ def finalAgentStructuredOutputParse(final_output_agent, user_interactions):
             parsed=True
         except Exception as e:
             print("FINAL OUTPUT AGENT PARSE ERROR",e)
-            internal_context.append( HumanMessage(f"Encountered an error: {e}") )
+            internal_context.append( HumanMessage(f"Encountered the following error. Try again: {e}") )
     return obj
 
 
@@ -138,8 +170,10 @@ def parameterAgent(llm_model, structured_output_model : BaseModel,
                    role: str, tools,
                    tool_rules : List[str] = [],
                    parameter_rules : List[str] = [],
-                   input_messages = [ HumanMessage("Start your workflow") ]
+                   input_messages = [ HumanMessage("Start your workflow") ],
+                   additional_user_query_rules = []
                    ):
+
     output_type_name = type(structured_output_model).__name__
     param_rules_header = """    -------------------------------------------
     Additional rules for specific parameters:   
@@ -174,10 +208,10 @@ def parameterAgent(llm_model, structured_output_model : BaseModel,
     
     If the user asks a question, you must answer it before asking any further questions
 
-    Once the user has specified all parameters, respond with "<DONE>" and nothing else.
+    Once the user has specified all parameters, respond with "<DONE>" and nothing else. Never output the completed JSON. Never ask the user to confirm the complete set of parameters.
 
     DO NOT PERFORM ANY PLANNING STEPS
-    
+
     You must adhere to the following rules:      
     -----------------------------------------
     Output rules
@@ -190,7 +224,9 @@ def parameterAgent(llm_model, structured_output_model : BaseModel,
     -------------------------------------------
     General Parameter Rules:
     -------------------------------------------
-    - **Never** guess a parameter. The values should always be obtained from the user. Never record a parameter value unless it has been explicitly provided by the user. Follow the User Query rules below for questions to the user.
+    - If the parameter rules specify that *you* should choose or set the value of a specific parameter yourself, you must ignore/skip this parameter. Do not ask the user about this parameter.
+    - Otherwise, **Never** guess a parameter. These values should always be obtained from the user. Never record such a parameter value unless it has been explicitly provided by the user. Follow the User Query rules below for questions to the user.
+    
 
     -------------------------------------------
     Tool Rules:    
@@ -208,7 +244,8 @@ def parameterAgent(llm_model, structured_output_model : BaseModel,
     - Instead of answering your question about a parameter, the user might respond to your query with a question of their own. If this occurs:
          - On the first line of your response, answer the user's question
          - On a separate line repeat the original question about the parameter but include a statement indicating that they can ask follow-up questions
-
+{promptStringList(additional_user_query_rules,4)}
+    
 {param_rules_header}    
 
 {promptStringList(parameter_rules,4)}
@@ -229,26 +266,36 @@ def parameterAgent(llm_model, structured_output_model : BaseModel,
     """ + json.dumps(structured_output_model.model_json_schema())
 
     
-    config = {"configurable": {"thread_id": "1"}}
+    config = {"configurable": {"thread_id": "1", "stream" : False}} 
     agent = create_agent(model=llm_model, tools=tools, system_prompt=sys)
 
+
+    check_param_rules_header = """    -------------------------
+    Specific parameter rules
+    -------------------------
+    These rules apply to specific parameters. If the rule for a parameter states that the value should be chosen by the agent, do not include this parameter in your checks.
+    """ if len(parameter_rules) > 0 else ""
+
+    
     check_complete_sys = """
     You must check the message history to determine if the user has provided answers to all fields in the following schema:
-    """ + json.dumps(structured_output_model.model_json_schema()) + """
+    """ + json.dumps(structured_output_model.model_json_schema()) + f"""
     Identify all parameters that the user has not specified and output them into the missing_parameters field of your output.
     If the user has specified all parameters, set missing_parameters to an empty list
 
+{check_param_rules_header}    
+
+{promptStringList(parameter_rules,4)}
+
+    ------------------------
+    Output rules
+    ------------------------       
     Your output must be provided according to the following schema:
     """ + json.dumps(ParameterCheck.model_json_schema())
     
 
     check_complete_agent = create_agent(model=llm_model, system_prompt=check_complete_sys, response_format=ParameterCheck)
-
-    check_param_rules_header = """    -------------------------
-    Specific parameter rules
-    -------------------------""" if len(parameter_rules) > 0 else ""
-
-    
+   
     output_sys = f"""
     You are an agent responsible for inserting information from the user into a structured output with the schema below.
 
@@ -257,8 +304,8 @@ def parameterAgent(llm_model, structured_output_model : BaseModel,
     Determine whether the user has chosen a value by identifying whether the user's response is a statement describing a valid value for the parameter.
 
     You must identify the user's decision for all parameters
-
-    - **Never** guess a parameter. The values should always be obtained from the user's responses.
+    - If the rules for a specific parameter state that you must choose or specify a value, do this now based on the rule and the message history
+    - Otherwise, **never** guess a parameter. These values should always be obtained from the user's responses.
 
 {check_param_rules_header}    
 
@@ -288,15 +335,19 @@ def parameterAgent(llm_model, structured_output_model : BaseModel,
                 continue
     
             #Formally parse the message chain into structured output
-            obj = finalAgentStructuredOutputParse(final_output_agent, user_interactions)
+            obj = finalAgentStructuredOutputParse(final_output_agent, user_interactions, structured_output_model)
 
             #Automatic validation
-            valid = obj.validate()
-            if not valid[0]:
-                print("VALIDATION FAIL",valid)
-                user_interactions.append(HumanMessage(f"Your previous response failed validation due to: {valid[1]}"))
-                continue
-            
+            try:            
+                valid = obj.check()
+                if not valid[0]:
+                    print("VALIDATION FAIL",valid)
+                    user_interactions.append(HumanMessage(f"Your previous response failed validation due to: {valid[1]}"))
+                    continue
+            except Exception as e:
+                if not isinstance(e, AttributeError):
+                    raise Exception(f"Validation threw an error, {e}")
+                
             #Human validation
             output = f"Obtained:\n" + prettyPrintPydantic(obj)
             AgentPrint(output)
