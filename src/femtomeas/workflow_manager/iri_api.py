@@ -36,6 +36,10 @@ def replaceSpecialGlobusEndpoint(endpoint : str):
         return endpoint
 
 
+def listSpecialGlobusEndpoints():
+    return special_globus_endpoints.keys()
+
+    
 tokens = { "iriapi_base" : None, "iriapi_transfer_base" : None }  #index tokens by their base path
 
 

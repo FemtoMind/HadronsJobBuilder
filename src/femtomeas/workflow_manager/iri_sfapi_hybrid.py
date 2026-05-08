@@ -24,6 +24,10 @@ known_machines = {  "Perlmutter" :
                      } }
 tokens = { "iriapi_base" : None, "sfapi_base" : None }  #index tokens by their base path
 
+def listSpecialGlobusEndpoints():
+    return ["dtn","hpss","perlmutter"]
+
+
 #Right now we use IRI for everything but the Globus transfers, so we need to use the Superfacility API also
 
 sfapi_session = None

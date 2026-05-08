@@ -21,7 +21,8 @@ from langchain.agents.middleware import before_model, after_model, AgentState
 import json
 from femtomeas.agent_common.common import getUserInput, provideInformationToUser, queryYesNo, prettyPrintPydantic, Print as AgentPrint, Input as AgentInput
 from femtomeas.agent_common.agent_base import parameterAgent
-from femtomeas.workflow_manager.api_general import getKnownMachines, getUserAccountProjects, getMachineQueues
+from femtomeas.workflow_manager.api_general import getKnownMachines, getUserAccountProjects, getMachineQueues, listSpecialGlobusEndpoints
+
 from langchain.tools import tool
 from .hadrons import defaultRankGeom
 from langgraph.checkpoint.memory import MemorySaver
@@ -226,7 +227,7 @@ def hadronsSubmissionAgent(state : State, jman : JobManager, model):
   - In your response, on a separate line before your question, explain that this parameter distinguishes between different job collections. It is used as the name of a parent directory within the sandbox to keep different collections separate.
 """,
 
-"""copy_out:
+f"""copy_out:
   For this parameter, perform the following:
    1) For your first question, you MUST ask:
       "Do you want to copy results to a remote machine for postprocessing?"  
@@ -238,7 +239,7 @@ def hadronsSubmissionAgent(state : State, jman : JobManager, model):
       If the user says no:
       - set copy_out to None
     
-  Note that we also accept special UUIDs "dtn", "hpss" or "perlmutter" in place of regular ID strings."""
+  Note that we also accept special UUIDs {listSpecialGlobusEndpoints()} in place of regular ID strings."""
   ]
 
     tools = [agentGetKnownMachines,agentGetUserAccounts,

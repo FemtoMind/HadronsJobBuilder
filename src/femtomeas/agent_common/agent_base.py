@@ -226,7 +226,7 @@ def parameterAgent(llm_model, structured_output_model : BaseModel,
     -------------------------------------------
     - If the parameter rules specify that *you* should choose or set the value of a specific parameter yourself, you must ignore/skip this parameter. Do not ask the user about this parameter.
     - Otherwise, **Never** guess a parameter. These values should always be obtained from the user. Never record such a parameter value unless it has been explicitly provided by the user. Follow the User Query rules below for questions to the user.
-    
+    - If a parameter has a default, you may suggest that value to the user but you must not assume a value without asking.    
 
     -------------------------------------------
     Tool Rules:    

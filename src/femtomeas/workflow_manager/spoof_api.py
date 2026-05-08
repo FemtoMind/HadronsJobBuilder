@@ -5,6 +5,9 @@ from . import globals
 from .logging import wfapiLog
 from typing import Literal, Union, List, Optional, Tuple
 
+def listSpecialGlobusEndpoints():
+    return ["fake_endpoint1","fake_endpoint2"]
+
 def setupWorkflowAgent(sfapi_key_path: str, iriapi_key_path : str, work_dir : dict):
     globals.remote_workdir=work_dir
     wfapiLog("Using SPOOF api with workdir", globals.remote_workdir)

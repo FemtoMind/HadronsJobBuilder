@@ -13,6 +13,9 @@ from .logging import wfapiLog
 
 known_machines = {  "Perlmutter" : { "sfapi_enum" : Machine.perlmutter }  }
 
+def listSpecialGlobusEndpoints():
+    return ["dtn","hpss","perlmutter"]
+
 sfapi_key_path=None
 
 def setupWorkflowAgent(_sfapi_key_path: str, iriapi_key_path : str, work_dir : dict):
