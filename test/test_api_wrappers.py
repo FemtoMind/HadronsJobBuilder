@@ -5,7 +5,7 @@ import time
 import stat
 import os
 import json
-from femtomeas.workflow_manager.manager_config import readManagerConfigFile
+from femtomeas.workflow_manager.manager_config import readManagerConfigFile, setupManager
 import sys
 
 def hadronsXMLexample(output_file):
@@ -126,7 +126,8 @@ def hadronsXMLexample(output_file):
 if len(sys.argv) == 1:
     raise Exception("Must provide the manager configuration JSON")
 
-readManagerConfigFile(sys.argv[1])
+config = readManagerConfigFile(sys.argv[1])
+setupManager(config)
 
 machine = "Perlmutter"
 safe_dir = globals.remote_workdir[machine]
@@ -227,7 +228,7 @@ if 0:
 if 0:
     print(globusTransferStatus(machine, '61fc7889-4579-11f1-8b54-0ea3589134b3'))
         
-if 0:
+if 1:
     tid = globusCopyToMachine(machine, safe_dir + "/test_4_19", "dtn", "/global/cfs/cdirs/mp13/ckelly/globus_source_test_dir/test.dat")
     for i in range(10):
         print(globusTransferStatus(machine, tid))
@@ -241,7 +242,7 @@ if 0:
 
 
         
-if 1:
+if 0:
     #Test copying entire directories
     tid = globusCopyToMachine(machine, safe_dir, "dtn", "/global/cfs/cdirs/mp13/ckelly/globus_source_test_dir/test_dir")
     for i in range(10):

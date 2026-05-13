@@ -12,6 +12,7 @@ import stat
 from pathlib import Path
 import globus_sdk
 from globus_sdk.exc import GlobusAPIError
+from globus_sdk.scopes import TransferScopes
 from .utils import checkSafePath
 from .logging import wfapiLog, wfapiUserQuery
 
@@ -82,6 +83,11 @@ def refresh_tokens(client: globus_sdk.NativeAppAuthClient, refresh_token: str, s
             f"IRI token refresh failed ({exc.http_status}); switching to interactive login."
         )
         return None
+    except Exception as exc:
+        wfapiLog(
+            f"IRI token refresh failed other error (Exception: {exc}, Server response: {token_response}, Resource server: {server}); switching to interactive login."
+        )
+        return None
 
 ############################################################
 ####IRI API SETUP
@@ -116,6 +122,8 @@ def interactive_login(client: globus_sdk.NativeAppAuthClient) -> dict:
             accept = True
         except Exception as e:
             continue
+
+    assert IRI_RESOURCE_SERVER in token_response.by_resource_server.keys()
         
     return token_response.by_resource_server[IRI_RESOURCE_SERVER]
 
@@ -158,7 +166,7 @@ IRI_TRANSFER_DEFAULT_SCOPE = f"https://auth.globus.org/scopes/{IRI_TRANSFER_RESO
 
 def interactive_login_transfer(client: globus_sdk.NativeAppAuthClient) -> dict:
     scope = globus_sdk.Scope(IRI_TRANSFER_DEFAULT_SCOPE)
-    mapped_collections = [v for k,v in special_globus_endpoints]
+    mapped_collections = [v for k,v in special_globus_endpoints.items()]
     
     data_access = [globus_sdk.scopes.GCSCollectionScopes(mc).data_access for mc in mapped_collections]
     transfer_scope = TransferScopes.all.with_dependencies(data_access)
@@ -182,7 +190,9 @@ def interactive_login_transfer(client: globus_sdk.NativeAppAuthClient) -> dict:
             accept = True
         except Exception as e:
             continue
-    
+
+    assert IRI_TRANSFER_RESOURCE_SERVER in token_response.by_resource_server.keys()
+        
     return token_response.by_resource_server[IRI_TRANSFER_RESOURCE_SERVER]
 
 def setupIRIapiTransfer(key_path):
@@ -195,7 +205,7 @@ def setupIRIapiTransfer(key_path):
         auth_data = refresh_tokens(client, stored["refresh_token"], IRI_TRANSFER_RESOURCE_SERVER)
 
     if auth_data == None:
-        auth_data = interactive_login(client)
+        auth_data = interactive_login_transfer(client)
 
     save_tokens(Path(key_path), auth_data)
 

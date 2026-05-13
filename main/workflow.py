@@ -1,9 +1,10 @@
 import os
 from langchain_openai import ChatOpenAI
 from femtomeas.meas_config_agent import agent
-from femtomeas.workflow_manager.manager_config import readManagerConfigFile
+from femtomeas.workflow_manager.manager_config import readManagerConfigFile, setupManager
 from femtomeas.workflow_manager.manager import JobManager
 from femtomeas.workflow_manager.hadrons_workflow import hadronsSubmissionAgent
+from femtomeas.agent_common.agent_config import readI2APIkey
 
 import argparse
 
@@ -28,6 +29,8 @@ def parse_args():
         description="Hadrons workflow controller"
     )
 
+    parser.add_argument('config_file', help='The path to the configuration file')
+    
     parser.add_argument(
         "--reload-checkpoint",
         nargs="?",                 # 0 or 1 values
@@ -48,8 +51,7 @@ def parse_args():
 
     parser.add_argument(
         "--execute-workflow",
-        type=str,
-        metavar="HADRONS_MACHINE_CONFIG",
+        action="store_true",
         help="Activate the job manager and enqueue the workflow. Job manager will remain active until killed (safe).",
     )
 
@@ -62,25 +64,27 @@ def parse_args():
     return parser.parse_args()
 
 
-
-local_llm = ChatOpenAI(
-    model="gpt-oss-120b-GGUF",
-    openai_api_key="sk-local",
-    openai_api_base="http://localhost:8000/v1",
-    temperature=0
-)
-
-amsc_llm_0t = ChatOpenAI(
-    model="gpt-oss-120b",
-    base_url="https://api.i2-core.american-science-cloud.org/",
-    temperature=0
-)
-
-llm = amsc_llm_0t
-
 if __name__ == "__main__":
     args = parse_args()
 
+    config = readManagerConfigFile(args.config_file)
+
+    local_llm = ChatOpenAI(
+        model="gpt-oss-120b-GGUF",
+        openai_api_key="sk-local",
+        openai_api_base="http://localhost:8000/v1",
+        temperature=0
+    )
+
+    amsc_llm_0t = ChatOpenAI(
+        model="gpt-oss-120b",
+        base_url="https://api.i2-core.american-science-cloud.org/",
+        temperature=0,
+        api_key = readI2APIkey(config.agent.i2api_key_path)
+    )
+
+    llm = amsc_llm_0t
+    
     reload_checkpoint_file = args.reload_checkpoint if args.reload_checkpoint is not None else "ckpoint_state.json" #NB: argparse default argument (const) is only used if the arg is specified but a value not provided, not when the arg is not specified
     reload_checkpoint = args.reload_checkpoint is not None and os.path.exists(reload_checkpoint_file)
 
@@ -97,7 +101,7 @@ if __name__ == "__main__":
     #Start the job manager
     jman = None
     if args.execute_workflow is not None:
-        readManagerConfigFile(args.execute_workflow)
+        setupManager(config)
         jman = JobManager("jobs.db")
         jman.start()
         

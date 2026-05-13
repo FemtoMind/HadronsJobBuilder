@@ -16,7 +16,8 @@ dependencies = [
   "dash-extensions",
   "dash-ag-grid",
   "fastapi",
-  "uvicorn"
+  "uvicorn",
+  "websockets"
 ]
 
 [tool.setuptools]
